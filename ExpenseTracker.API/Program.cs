@@ -18,6 +18,18 @@ builder.Services.AddDbContext<PsqlDbContext>(options =>
 
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularDev", 
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:4200") 
+                   .AllowAnyMethod() 
+                   .AllowAnyHeader() 
+                   .AllowCredentials();
+        });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -83,6 +95,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowAngularDev");
 
 app.UseAuthentication();
 app.UseAuthorization();
