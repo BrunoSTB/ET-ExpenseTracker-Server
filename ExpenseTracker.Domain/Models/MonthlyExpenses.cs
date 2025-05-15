@@ -6,12 +6,12 @@
         public DateOnly ExpensesDate { get; set; }
         public List<Expense> Expenses { get; set; }
 
-        public MonthlyExpenses(decimal totalExpenses,
+        public MonthlyExpenses(List<Expense> expenses,
                                DateOnly expensesDate)
         {
-            TotalExpenses = totalExpenses;
             ExpensesDate = expensesDate;
-            Expenses = new List<Expense>();
+            Expenses = expenses;
+            TotalExpenses = expenses.Sum(x => x.Value);
         }
     }
 }

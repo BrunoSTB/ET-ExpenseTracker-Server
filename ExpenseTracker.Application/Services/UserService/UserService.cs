@@ -12,27 +12,27 @@ namespace ExpenseTracker.Application.Services.UserService
             _userRepository = userRepository;
         }
 
-        public async Task<User?> GetUserById(int id)
+        public async Task<User?> GetUserById(long id)
         {
             return await _userRepository.GetById(id);
         }
 
-        public async Task<User> CreateUser(User user)
+        public async Task<User?> CreateUser(User user)
         {
             var result = await _userRepository.CreateUser(user);
             return result;
         }
 
-        public async Task<bool> Login(User userInput)
+        public async Task<User?> Login(User userInput)
         {
             var expectedUser = await _userRepository.GetByUsername(userInput.Username);
 
             if (expectedUser == null || expectedUser.Password != userInput.Password)
             {
-                return false;
+                return null;
             }
 
-            return true;
+            return expectedUser;
         }
     }
 }

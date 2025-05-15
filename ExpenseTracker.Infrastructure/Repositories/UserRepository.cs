@@ -15,7 +15,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
             Context = context;
         }
 
-        public async Task<User?> GetById(int id)
+        public async Task<User?> GetById(long id)
         {
             var userDataModel = await Context.Users.FirstOrDefaultAsync(x => x.Id == id);
             if (userDataModel == null)
@@ -49,7 +49,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 return null;
             }
 
-            return new User(userDataModel.Username, userDataModel.Password);
+            return new User(userDataModel.Username, userDataModel.Password) { Id = userDataModel.Id };
         }
     }
 }

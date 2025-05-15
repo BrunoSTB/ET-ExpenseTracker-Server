@@ -12,9 +12,14 @@ namespace ExpenseTracker.Application.Services.ExpenseService
             _expenseRepository = expenseRepository;
         }
 
-        public async Task<Expense> GetExpenseById(int id)
+        public async Task<Expense?> GetExpenseById(int id)
         {
             return await _expenseRepository.GetExpenseAsync(id);
+        }
+
+        public async Task<Expense?> CreateExpense(Expense expense)
+        {
+            return await _expenseRepository.CreateExpense(expense);
         }
     }
 }

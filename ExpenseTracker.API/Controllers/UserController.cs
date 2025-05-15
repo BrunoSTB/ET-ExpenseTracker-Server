@@ -1,6 +1,7 @@
 ﻿using ExpenseTracker.API.Controllers.RequestModels;
 using ExpenseTracker.API.Helpers;
 using ExpenseTracker.Application.Services.UserService;
+using ExpenseTracker.Domain.Dtos;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -44,22 +45,29 @@ namespace ExpenseTracker.API.Controllers
             {
                 Email = requestBody.Email
             };
-            return await _userService.CreateUser(user);
+            var result = await _userService.CreateUser(user);
+
+            if (result == null)
+            {
+                return BadRequest("Registration failed.");
+            }
+
+            return Ok(result);
         }
 
         [HttpPost]
         [Route("Login")]
-        public async Task<ActionResult<string>> Login([FromBody] LoginRequestModel requestBody)
+        public async Task<ActionResult<LoginDto>> Login([FromBody] LoginRequestModel requestBody)
         {
-            var user = new User(requestBody.Username, requestBody.Password);
-            var isExpectedUser = await _userService.Login(user);
+            var userRequest = new User(requestBody.Username, requestBody.Password);
+            var expectedUser = await _userService.Login(userRequest);
 
-            if (!isExpectedUser)
+            if (expectedUser == null)
             {
                 return BadRequest("Incorrect username or password");
             }
-
-            return Ok(AuthHelpers.GenerateJWTToken(user));
+            var result = new LoginDto(expectedUser.Username, AuthHelpers.GenerateJWTToken(expectedUser));
+            return Ok(result);
         }
     }
 }
