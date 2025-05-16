@@ -2,6 +2,7 @@
 using ExpenseTracker.Domain.Models;
 using ExpenseTracker.Infrastructure.DbConfiguration;
 using ExpenseTracker.Infrastructure.DbConfiguration.DataModels;
+using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Infrastructure.Repositories
 {
@@ -49,6 +50,16 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 Console.WriteLine("Exception while trying to create new Expense. exception: " + ex.Message);
                 return null;
             }
+        }
+
+        public async Task<List<MonthlyExpenses>> GetExpensesByYear(int year, long userId)
+        {
+            var result = await Context.Expenses
+                .Where(x => x.UserId == userId &&
+                            x.ExpenseDate.Year == year)
+                .GroupBy(x => x.ExpenseDate.Month)
+                .Select(x => new MonthlyExpenses(x.Select(y => new Expense(y.Value, y.Name, y.ExpenseDate, userId)).ToList(), x.Key)).ToListAsync();
+            return result;
         }
     }
 }

@@ -21,5 +21,10 @@ namespace ExpenseTracker.Application.Services.ExpenseService
         {
             return await _expenseRepository.CreateExpense(expense);
         }
+
+        public async Task<List<MonthlyExpenses>> GetExpensesByYear(int year, long userId)
+        {
+            return await _expenseRepository.GetExpensesByYear(year, userId);
+        }
     }
 }

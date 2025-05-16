@@ -8,6 +8,7 @@ using System.Security.Claims;
 namespace ExpenseTracker.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("[controller]")]
     public class ExpenseController : ControllerBase
     {
@@ -22,17 +23,34 @@ namespace ExpenseTracker.API.Controllers
             _expenseService = expenseService;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<List<MonthlyExpenses>>> GetExpensesByYear([FromQuery] int year)
+        {
+            var result = await _expenseService.GetExpensesByYear(year, GetCurrentUserId());
+
+            if (result == null) 
+                return NotFound();
+            return Ok(result);
+        }
+
         [HttpPost]
-        [Authorize]
         public async Task<ActionResult<Expense>> Create([FromBody] CreateExpenseRequestModel requestModel)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var expense = new Expense(requestModel.Value, requestModel.Name, requestModel.Date, long.Parse(userId!));
+            var expense = new Expense(requestModel.Value, 
+                                      requestModel.Name, 
+                                      requestModel.Date, 
+                                      GetCurrentUserId());
+
             var result = await _expenseService.CreateExpense(expense);
 
             if (result == null)
                 return NotFound();
             return Ok(result);
+        }
+
+        private long GetCurrentUserId()
+        {
+            return long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
         }
     }
 }
