@@ -1,7 +1,6 @@
 ﻿using ExpenseTracker.Application.Interfaces;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Identity;
-using System.Collections.Generic;
 
 namespace ExpenseTracker.Application.Services.UserService
 {
