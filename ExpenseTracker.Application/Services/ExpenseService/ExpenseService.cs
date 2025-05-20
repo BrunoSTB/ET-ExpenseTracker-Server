@@ -26,5 +26,10 @@ namespace ExpenseTracker.Application.Services.ExpenseService
         {
             return await _expenseRepository.GetExpensesByYear(year, userId);
         }
+
+        public async Task<bool> DeleteByIds(long[] expensesIds, long userId)
+        {
+            return await _expenseRepository.DeleteByIds(expensesIds, userId);
+        }
     }
 }

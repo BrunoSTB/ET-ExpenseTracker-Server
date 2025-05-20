@@ -58,8 +58,24 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 .Where(x => x.UserId == userId &&
                             x.ExpenseDate.Year == year)
                 .GroupBy(x => x.ExpenseDate.Month)
-                .Select(x => new MonthlyExpenses(x.Select(y => new Expense(y.Value, y.Name, y.ExpenseDate, userId)).ToList(), x.Key)).ToListAsync();
+                .Select(x => new MonthlyExpenses(x.Select(y => new Expense(y.Value, y.Name!, y.ExpenseDate, userId) { Id = y.Id }).ToList(), x.Key)).ToListAsync();
             return result;
+        }
+
+        public async Task<bool> DeleteByIds(long[] ids, long userId)
+        {
+            try
+            {
+                await Context.Expenses
+                    .Where(x => ids.Contains(x.Id) && x.UserId == userId)
+                    .ExecuteDeleteAsync();
+                return true;
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in repository while trying to delete by multiple Ids: " + ex.Message);
+                return false;
+            }
         }
     }
 }

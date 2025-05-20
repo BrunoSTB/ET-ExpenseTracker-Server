@@ -48,6 +48,15 @@ namespace ExpenseTracker.API.Controllers
             return Ok(result);
         }
 
+        [HttpDelete("DeleteByIds")]
+        public async Task<IActionResult> DeleteByIds([FromQuery] long[] ids)
+        {
+            var result = await _expenseService.DeleteByIds(ids, GetCurrentUserId());
+            if (!result)
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+            return NoContent();
+        }
+
         private long GetCurrentUserId()
         {
             return long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
