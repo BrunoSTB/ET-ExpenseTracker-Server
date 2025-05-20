@@ -11,10 +11,10 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = Environment.GetEnvironmentVariable("PsqlConnectionString");
+var connectionString = Environment.GetEnvironmentVariable("SqlConnectionString");
 
-builder.Services.AddDbContext<PsqlDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<SqlServerDbContext>(options =>
+    options.UseAzureSql(connectionString));
 
 builder.Services.AddControllers();
 
