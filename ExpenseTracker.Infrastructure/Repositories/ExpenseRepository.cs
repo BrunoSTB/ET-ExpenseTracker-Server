@@ -31,7 +31,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
                     ExpenseDate = expense.ExpenseDate, 
                     Name =  expense.Name,
                     Value = expense.Value,
-                    User = Context.Users.FirstOrDefault(x => x.Id == expense.UserId),
+                    User = Context.Users.First(x => x.Id == expense.UserId),
                     UserId = expense.UserId
                 };
 
