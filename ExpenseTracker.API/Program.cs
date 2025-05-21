@@ -18,12 +18,13 @@ builder.Services.AddDbContext<SqlServerDbContext>(options =>
 
 builder.Services.AddControllers();
 
+var corsOrigins = Environment.GetEnvironmentVariable("CORSOrigins");
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", 
         builder =>
         {
-            builder.WithOrigins("http://localhost:4200") 
+            builder.WithOrigins(corsOrigins!) 
                    .AllowAnyMethod() 
                    .AllowAnyHeader() 
                    .AllowCredentials();

@@ -28,7 +28,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "SqlConnectionString": "...",
-        "JWT_SECRET": "..."
+        "JWT_SECRET": "...",
+        "CORSOrigins": "..."
       }
     },
     "IIS Express": {
