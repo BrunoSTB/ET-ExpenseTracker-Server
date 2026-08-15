@@ -11,7 +11,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = Environment.GetEnvironmentVariable("SqlConnectionString");
+var connectionString = Environment.GetEnvironmentVariable("SqlConnectionString") 
+    ?? "Server=localhost;Database=ExpenseTracker;Trusted_Connection=True;TrustServerCertificate=True;"; 
 
 builder.Services.AddDbContext<SqlServerDbContext>(options =>
     options.UseAzureSql(connectionString));
