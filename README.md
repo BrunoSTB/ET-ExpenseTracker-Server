@@ -4,8 +4,8 @@ A RESTful API backend for managing personal expenses, built with ASP.NET Core 9 
 
 ## Tech Stack
 
-- **.NET 9.0** — ASP.NET Core Web API
-- **Entity Framework Core 9** — ORM with SQL Server (Azure SQL)
+- **.NET 10.0** — ASP.NET Core Web API
+- **Entity Framework Core 10** — ORM with PostgreSQL
 - **JWT** — Bearer token authentication
 - **Swagger/OpenAPI** — Auto-generated API docs
 
@@ -45,8 +45,8 @@ ExpenseTracker.Infrastructure — EF Core DbContext, repositories, migrations
 
 ## Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download)
-- SQL Server instance (local or Azure SQL)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download)
+- PostgreSQL instance (local, Docker, or hosted)
 
 ## Environment Variables
 
@@ -54,7 +54,7 @@ The following environment variables must be set before running:
 
 | Variable | Description |
 |----------|-------------|
-| `SqlConnectionString` | SQL Server connection string |
+| `SqlConnectionString` | PostgreSQL (Npgsql) connection string |
 | `JWT_SECRET` | Secret key used to sign JWT tokens |
 | `CORSOrigins` | Comma-separated list of allowed frontend origins |
 
@@ -66,18 +66,28 @@ git clone <repository-url>
 cd ET-ExpenseTracker-Server
 
 # Set environment variables (example for bash)
-export SqlConnectionString="Server=...;Database=ExpenseTracker;..."
+export SqlConnectionString="Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
 export JWT_SECRET="your-secret-key"
 export CORSOrigins="http://localhost:4200"
 
-# Apply database migrations
-dotnet ef database update --project ExpenseTracker.Infrastructure --startup-project ExpenseTracker.API
-
-# Run the API
+# Run the API (database migrations are applied automatically on startup)
 dotnet run --project ExpenseTracker.API
 ```
 
 Swagger UI is available at `https://localhost:7010/swagger` when running in development.
+
+## Running with Docker
+
+The included `Dockerfile` and `docker-compose.yml` run the API and a PostgreSQL
+database together — useful for self-hosting on a personal VPS:
+
+```bash
+docker compose up -d --build
+```
+
+The API applies pending EF Core migrations automatically on startup, so no
+manual `dotnet ef database update` step is needed. Edit `JWT_SECRET` in
+`docker-compose.yml` before deploying anywhere reachable from the internet.
 
 ## Authentication
 

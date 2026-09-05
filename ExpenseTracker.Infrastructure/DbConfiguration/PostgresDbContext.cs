@@ -1,11 +1,11 @@
-﻿using ExpenseTracker.Infrastructure.DbConfiguration.DataModels;
+using ExpenseTracker.Infrastructure.DbConfiguration.DataModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Infrastructure.DbConfiguration
 {
-    public class SqlServerDbContext : DbContext
+    public class PostgresDbContext : DbContext
     {
-        public SqlServerDbContext(DbContextOptions<SqlServerDbContext> options) : base(options) { }
+        public PostgresDbContext(DbContextOptions<PostgresDbContext> options) : base(options) { }
 
         public DbSet<UserDataModel> Users { get; set; }
         public DbSet<ExpenseDataModel> Expenses { get; set; }
@@ -14,7 +14,7 @@ namespace ExpenseTracker.Infrastructure.DbConfiguration
         {
             base.OnModelCreating(modelBuilder);
 
-            // Ensure decimal precision/scale is configured to avoid silent truncation in SQL Server
+            // Ensure decimal precision/scale is configured to avoid silent truncation
             modelBuilder.Entity<ExpenseDataModel>()
                 .Property(e => e.Value)
                 .HasPrecision(18, 2);

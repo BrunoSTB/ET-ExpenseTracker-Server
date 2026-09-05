@@ -11,11 +11,11 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = Environment.GetEnvironmentVariable("SqlConnectionString") 
-    ?? "Server=localhost;Database=ExpenseTracker;Trusted_Connection=True;TrustServerCertificate=True;"; 
+var connectionString = Environment.GetEnvironmentVariable("SqlConnectionString")
+    ?? "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;";
 
-builder.Services.AddDbContext<SqlServerDbContext>(options =>
-    options.UseAzureSql(connectionString));
+builder.Services.AddDbContext<PostgresDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddControllers();
 
@@ -88,6 +88,12 @@ builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<PostgresDbContext>();
+    db.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

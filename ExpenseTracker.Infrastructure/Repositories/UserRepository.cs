@@ -8,9 +8,9 @@ namespace ExpenseTracker.Infrastructure.Repositories
 {
     public class UserRepository : IUserRepository
     {
-        public SqlServerDbContext Context { get; }
+        public PostgresDbContext Context { get; }
 
-        public UserRepository(SqlServerDbContext context)
+        public UserRepository(PostgresDbContext context)
         {
             Context = context;
         }
