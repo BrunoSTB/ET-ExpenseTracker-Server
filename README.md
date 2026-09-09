@@ -60,6 +60,8 @@ The following environment variables must be set before running:
 
 ## Getting Started
 
+### Linux / macOS (bash)
+
 ```bash
 # Clone the repo
 git clone <repository-url>
@@ -71,6 +73,41 @@ export JWT_SECRET="your-secret-key"
 export CORSOrigins="http://localhost:4200"
 
 # Run the API (database migrations are applied automatically on startup)
+dotnet run --project ExpenseTracker.API
+```
+
+### Windows (PowerShell)
+
+```powershell
+# Clone the repo
+git clone <repository-url>
+cd ET-ExpenseTracker-Server
+
+# Set environment variables (current session only)
+$env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+$env:JWT_SECRET = "your-secret-key"
+$env:CORSOrigins = "http://localhost:4200"
+
+# Run the API (database migrations are applied automatically on startup)
+dotnet run --project ExpenseTracker.API
+```
+
+`$env:` variables set this way only last for the current PowerShell session/terminal
+window. To persist them across sessions, use `setx` instead (requires a new
+terminal to take effect):
+
+```powershell
+setx SqlConnectionString "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+setx JWT_SECRET "your-secret-key"
+setx CORSOrigins "http://localhost:4200"
+```
+
+Or set them per-run without touching the environment at all:
+
+```powershell
+$env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"; `
+$env:JWT_SECRET = "your-secret-key"; `
+$env:CORSOrigins = "http://localhost:4200"; `
 dotnet run --project ExpenseTracker.API
 ```
 
