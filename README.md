@@ -60,6 +60,18 @@ The following environment variables must be set before running:
 
 ## Getting Started
 
+`ExpenseTracker.API/Properties/launchSettings.json` defines two profiles for
+`dotnet run`: `http` (port 5149 only) and `https` (ports 7010/5149, with
+Swagger). **`dotnet run` uses `http` by default** — pass `--launch-profile
+https` explicitly to get HTTPS and match the Swagger URL below.
+
+The `https` profile ships with `SqlConnectionString`/`CORSOrigins` set to
+local defaults, but `JWT_SECRET` is intentionally left blank so no real
+secret is committed to the repo. Fill it in locally (edit
+`launchSettings.json` or export it as shown below) before running — an
+empty `JWT_SECRET` makes the app fail fast on startup instead of silently
+signing tokens with a known key.
+
 ### Linux / macOS (bash)
 
 ```bash
@@ -72,8 +84,8 @@ export SqlConnectionString="Host=localhost;Database=ExpenseTracker;Username=post
 export JWT_SECRET="your-secret-key"
 export CORSOrigins="http://localhost:4200"
 
-# Run the API (database migrations are applied automatically on startup)
-dotnet run --project ExpenseTracker.API
+# Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
+dotnet run --project ExpenseTracker.API --launch-profile https
 ```
 
 ### Windows (PowerShell)
@@ -88,8 +100,8 @@ $env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=post
 $env:JWT_SECRET = "your-secret-key"
 $env:CORSOrigins = "http://localhost:4200"
 
-# Run the API (database migrations are applied automatically on startup)
-dotnet run --project ExpenseTracker.API
+# Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
+dotnet run --project ExpenseTracker.API --launch-profile https
 ```
 
 `$env:` variables set this way only last for the current PowerShell session/terminal
@@ -108,7 +120,7 @@ Or set them per-run without touching the environment at all:
 $env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"; `
 $env:JWT_SECRET = "your-secret-key"; `
 $env:CORSOrigins = "http://localhost:4200"; `
-dotnet run --project ExpenseTracker.API
+dotnet run --project ExpenseTracker.API --launch-profile https
 ```
 
 Swagger UI is available at `https://localhost:7010/swagger` when running in development.
