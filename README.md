@@ -4,8 +4,8 @@ A RESTful API backend for managing personal expenses, built with ASP.NET Core 9 
 
 ## Tech Stack
 
-- **.NET 9.0** — ASP.NET Core Web API
-- **Entity Framework Core 9** — ORM with SQL Server (Azure SQL)
+- **.NET 10.0** — ASP.NET Core Web API
+- **Entity Framework Core 10** — ORM with PostgreSQL
 - **JWT** — Bearer token authentication
 - **Swagger/OpenAPI** — Auto-generated API docs
 
@@ -45,8 +45,8 @@ ExpenseTracker.Infrastructure — EF Core DbContext, repositories, migrations
 
 ## Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download)
-- SQL Server instance (local or Azure SQL)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download)
+- PostgreSQL instance (local, Docker, or hosted)
 
 ## Environment Variables
 
@@ -54,11 +54,25 @@ The following environment variables must be set before running:
 
 | Variable | Description |
 |----------|-------------|
-| `SqlConnectionString` | SQL Server connection string |
+| `SqlConnectionString` | PostgreSQL (Npgsql) connection string |
 | `JWT_SECRET` | Secret key used to sign JWT tokens |
 | `CORSOrigins` | Comma-separated list of allowed frontend origins |
 
 ## Getting Started
+
+`ExpenseTracker.API/Properties/launchSettings.json` defines two profiles for
+`dotnet run`: `http` (port 5149 only) and `https` (ports 7010/5149, with
+Swagger). **`dotnet run` uses `http` by default** — pass `--launch-profile
+https` explicitly to get HTTPS and match the Swagger URL below.
+
+The `https` profile ships with `SqlConnectionString`/`CORSOrigins` set to
+local defaults, but `JWT_SECRET` is intentionally left blank so no real
+secret is committed to the repo. Fill it in locally (edit
+`launchSettings.json` or export it as shown below) before running — an
+empty `JWT_SECRET` makes the app fail fast on startup instead of silently
+signing tokens with a known key.
+
+### Linux / macOS (bash)
 
 ```bash
 # Clone the repo
@@ -66,18 +80,63 @@ git clone <repository-url>
 cd ET-ExpenseTracker-Server
 
 # Set environment variables (example for bash)
-export SqlConnectionString="Server=...;Database=ExpenseTracker;..."
+export SqlConnectionString="Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
 export JWT_SECRET="your-secret-key"
 export CORSOrigins="http://localhost:4200"
 
-# Apply database migrations
-dotnet ef database update --project ExpenseTracker.Infrastructure --startup-project ExpenseTracker.API
+# Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
+dotnet run --project ExpenseTracker.API --launch-profile https
+```
 
-# Run the API
-dotnet run --project ExpenseTracker.API
+### Windows (PowerShell)
+
+```powershell
+# Clone the repo
+git clone <repository-url>
+cd ET-ExpenseTracker-Server
+
+# Set environment variables (current session only)
+$env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+$env:JWT_SECRET = "your-secret-key"
+$env:CORSOrigins = "http://localhost:4200"
+
+# Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
+dotnet run --project ExpenseTracker.API --launch-profile https
+```
+
+`$env:` variables set this way only last for the current PowerShell session/terminal
+window. To persist them across sessions, use `setx` instead (requires a new
+terminal to take effect):
+
+```powershell
+setx SqlConnectionString "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+setx JWT_SECRET "your-secret-key"
+setx CORSOrigins "http://localhost:4200"
+```
+
+Or set them per-run without touching the environment at all:
+
+```powershell
+$env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"; `
+$env:JWT_SECRET = "your-secret-key"; `
+$env:CORSOrigins = "http://localhost:4200"; `
+dotnet run --project ExpenseTracker.API --launch-profile https
 ```
 
 Swagger UI is available at `https://localhost:7010/swagger` when running in development.
+
+## Running with Docker
+
+The included `Dockerfile` and `docker-compose.yml` run the API and a PostgreSQL
+database together — useful for self-hosting on a personal VPS:
+
+```bash
+docker compose up -d --build
+```
+
+The API applies pending EF Core migrations automatically on startup, so no
+manual `dotnet ef database update` step is needed. Edit `JWT_SECRET` in
+`docker-compose.yml` before deploying anywhere reachable from the internet.
 
 ## Authentication
 
