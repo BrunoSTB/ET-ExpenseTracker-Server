@@ -138,6 +138,67 @@ The API applies pending EF Core migrations automatically on startup, so no
 manual `dotnet ef database update` step is needed. Edit `JWT_SECRET` in
 `docker-compose.yml` before deploying anywhere reachable from the internet.
 
+## Deploying to Azure Container Apps + Neon/Supabase
+
+For personal/small-scale hosting at no cost: Azure Container Apps has a
+permanent free monthly grant (not a trial) and deploys straight from the
+`Dockerfile`; pair it with a free managed Postgres (Neon or Supabase), since
+Azure Database for PostgreSQL is not part of Azure's free tier.
+
+### 1. Create the Postgres database
+
+Create a free project on [Neon](https://neon.tech) or [Supabase](https://supabase.com)
+and grab the connection details. Build the `SqlConnectionString` in Npgsql
+format (note the required `Ssl Mode`, since these providers require TLS):
+
+```
+Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;
+```
+
+### 2. Build and push the image, then deploy
+
+```bash
+az login
+
+az group create --name expense-tracker-rg --location eastus
+
+az acr create --resource-group expense-tracker-rg --name <yourAcrName> --sku Basic
+az acr build --registry <yourAcrName> --image expense-tracker-api:latest .
+
+az containerapp env create --name expense-tracker-env --resource-group expense-tracker-rg --location eastus
+
+az containerapp create \
+  --name expense-tracker-api \
+  --resource-group expense-tracker-rg \
+  --environment expense-tracker-env \
+  --image <yourAcrName>.azurecr.io/expense-tracker-api:latest \
+  --registry-server <yourAcrName>.azurecr.io \
+  --target-port 8080 \
+  --ingress external \
+  --min-replicas 0 --max-replicas 1 \
+  --env-vars \
+    SqlConnectionString="Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;" \
+    JWT_SECRET="<a long random secret — do not reuse the local dev value>" \
+    CORSOrigins="https://your-frontend-domain.com"
+```
+
+Azure Container Apps terminates HTTPS for you and issues a free
+`*.azurecontainerapps.io` subdomain automatically — no reverse proxy or
+certificate setup needed. `--min-replicas 0` scales the app to zero when
+idle, which is what keeps this within the free monthly compute grant; the
+trade-off is a few seconds of cold-start latency on the first request after
+idling. Set `--min-replicas 1` only if you want an always-warm instance —
+that runs 24/7 and will likely exceed the free grant, incurring a small
+monthly cost.
+
+### 3. Redeploying after changes
+
+```bash
+az acr build --registry <yourAcrName> --image expense-tracker-api:latest .
+az containerapp update --name expense-tracker-api --resource-group expense-tracker-rg \
+  --image <yourAcrName>.azurecr.io/expense-tracker-api:latest
+```
+
 ## Authentication
 
 Register a user, then call `/user/Login` to receive a JWT token. Include it in subsequent requests:
