@@ -114,15 +114,6 @@ setx JWT_SECRET "your-secret-key"
 setx CORSOrigins "http://localhost:4200"
 ```
 
-Or set them per-run without touching the environment at all:
-
-```powershell
-$env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"; `
-$env:JWT_SECRET = "your-secret-key"; `
-$env:CORSOrigins = "http://localhost:4200"; `
-dotnet run --project ExpenseTracker.API --launch-profile https
-```
-
 Swagger UI is available at `https://localhost:7010/swagger` when running in development.
 
 ## Running with Docker
@@ -140,19 +131,18 @@ manual `dotnet ef database update` step is needed. Edit `JWT_SECRET` in
 
 ## Deploying to Azure Container Apps + Neon/Supabase
 
-For personal/small-scale hosting at no cost: Azure Container Apps has a
-permanent free monthly grant (not a trial) and deploys straight from the
-`Dockerfile`; pair it with a free managed Postgres (Neon or Supabase), since
-Azure Database for PostgreSQL is not part of Azure's free tier.
-
 ### 1. Create the Postgres database
 
 Create a free project on [Neon](https://neon.tech) or [Supabase](https://supabase.com)
-and grab the connection details. Build the `SqlConnectionString` in Npgsql
-format (note the required `Ssl Mode`, since these providers require TLS):
+and grab the connection details. Build the `SqlConnectionString` in .NET
+format (note to get the connection string from: Direct Connection String, Connection method Session Pooler):
 
 ```
-Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=aws-0-sa-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.zixxlxpnxvbyihflykme;Password=[YOUR-PASSWORD];SSL Mode=Require;Trust Server Certificate=true"
+  }
+}
 ```
 
 ### 2. Build and push the image, then deploy
