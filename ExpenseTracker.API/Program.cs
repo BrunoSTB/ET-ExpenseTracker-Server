@@ -19,15 +19,16 @@ builder.Services.AddDbContext<PostgresDbContext>(options =>
 
 builder.Services.AddControllers();
 
-var corsOrigins = Environment.GetEnvironmentVariable("CORSOrigins");
+var corsOrigins = Environment.GetEnvironmentVariable("CORSOrigins")!
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAngularDev", 
+    options.AddPolicy("AllowAngularDev",
         builder =>
         {
-            builder.WithOrigins(corsOrigins!) 
-                   .AllowAnyMethod() 
-                   .AllowAnyHeader() 
+            builder.WithOrigins(corsOrigins)
+                   .AllowAnyMethod()
+                   .AllowAnyHeader()
                    .AllowCredentials();
         });
 });
