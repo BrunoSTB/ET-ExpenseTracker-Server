@@ -44,5 +44,5 @@ msbuild.wrn
 
 .fake
 
-[Tt]est[Rr]esults/
+TestResults/
 coverage-report/
