@@ -44,6 +44,5 @@ msbuild.wrn
 
 .fake
 
-# Resultados de testes e cobertura
 [Tt]est[Rr]esults/
 coverage-report/
