@@ -32,7 +32,6 @@ jobs:
       - name: Build
         run: dotnet build ExpenseTracker.sln --no-restore --configuration Release
 
-      # As exclusões de cobertura (ex.: **/Migrations/*.cs) ficam em tests/coverage.runsettings.
       - name: Test
         run: >
           dotnet test ExpenseTracker.sln
