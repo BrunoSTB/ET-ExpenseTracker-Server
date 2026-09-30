@@ -1,0 +1,38 @@
+<Project>
+
+  <!-- Configuração comum a todos os projetos de teste em tests/. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- xUnit v3: o projeto de teste é um executável. -->
+    <OutputType>Exe</OutputType>
+    <!-- xUnit v3 4.x usa o Microsoft.Testing.Platform por padrão; mantém o dotnet test no modo VSTest, exigido pelo coverlet.collector (XPlat Code Coverage). -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <!-- Configuração de cobertura (exclusões) usada tanto local quanto no CI. -->
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)coverage.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="10.1.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NSubstitute" Version="6.2.0" />
+    <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="AwesomeAssertions" />
+  </ItemGroup>
+
+</Project>
