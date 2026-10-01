@@ -1,8 +1,10 @@
-﻿using ExpenseTracker.Application.IRepositories;
+﻿using ExpenseTracker.Application.Exceptions;
+using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Domain.Models;
 using ExpenseTracker.Infrastructure.DbConfiguration;
 using ExpenseTracker.Infrastructure.DbConfiguration.DataModels;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ExpenseTracker.Infrastructure.Repositories
 {
@@ -32,12 +34,28 @@ namespace ExpenseTracker.Infrastructure.Repositories
 
         public async Task<User?> CreateUser(User user)
         {
-            var userDataModel = new UserDataModel(user.Username, user.Password) { Email = user.Email };
+            try
+            {
+                var userDataModel = new UserDataModel(user.Username, user.Password!) { Email = user.Email };
 
-            var result = await Context.Users.AddAsync(userDataModel);
-            Context.SaveChanges();
+                var result = await Context.Users.AddAsync(userDataModel);
+                await Context.SaveChangesAsync();
 
-            return new User(result.Entity.Username, result.Entity.Password);
+                return new User(result.Entity.Username, result.Entity.Password)
+                {
+                    Id = result.Entity.Id,
+                    Email = result.Entity.Email
+                };
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+            {
+                throw new UsernameAlreadyTakenException(user.Username, ex);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception while trying to create new User. exception: " + ex.Message);
+                return null;
+            }
         }
 
         public async Task<User?> GetByUsername(string username)
@@ -49,7 +67,11 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 return null;
             }
 
-            return new User(userDataModel.Username, userDataModel.Password) { Id = userDataModel.Id };
+            return new User(userDataModel.Username, userDataModel.Password)
+            {
+                Id = userDataModel.Id,
+                Email = userDataModel.Email
+            };
         }
     }
 }

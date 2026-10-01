@@ -18,6 +18,10 @@ namespace ExpenseTracker.Infrastructure.DbConfiguration
             modelBuilder.Entity<ExpenseDataModel>()
                 .Property(e => e.Value)
                 .HasPrecision(18, 2);
+
+            modelBuilder.Entity<UserDataModel>()
+                .HasIndex(u => u.Username)
+                .IsUnique();
         }
     }
 }

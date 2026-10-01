@@ -2,5 +2,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\ExpenseTracker.Domain\ExpenseTracker.Domain.csproj" />
     <ProjectReference Include="..\..\ExpenseTracker.Application\ExpenseTracker.Application.csproj" />
+    <ProjectReference Include="..\..\ExpenseTracker.API\ExpenseTracker.API.csproj" />
   </ItemGroup>
 </Project>

@@ -50,9 +50,9 @@ Clean Architecture, four projects. Dependency direction matters:
 
 Request flow: Controller builds a Domain model from a RequestModel → Service (mostly a thin pass-through) → Repository (maps to DataModel, hits EF).
 
-Auth: controllers use `[Authorize]`; the current user id is read from the `ClaimTypes.NameIdentifier` claim (`GetCurrentUserId()` in `ExpenseController`). Expense queries/deletes are always scoped by that user id at the repository level. Tokens last 30 days.
+Auth: controllers use `[Authorize]`; the current user id is read from the `ClaimTypes.NameIdentifier` claim (`User.GetUserId()` from `API/Helpers/ClaimsPrincipalExtensions.cs`); never take a user id from the request. Expense queries/deletes are always scoped by that user id at the repository level. Tokens last 30 days.
 
-Error handling convention: repositories catch exceptions, log with `Console.WriteLine`, and return `null`/`false`; controllers translate those into `NotFound`/`BadRequest`/500.
+Error handling convention: repositories catch exceptions, log with `Console.WriteLine`, and return `null`/`false`; controllers translate those into `NotFound`/`BadRequest`/500. The exception is a duplicate username: the service and the repository (on a Postgres unique violation) throw `UsernameAlreadyTakenException`, which `UserController` maps to `409 Conflict`. Controllers return DTOs (`Domain/Dtos`), never the `User` domain model, so the password hash is never serialized.
 
 ## Tests
 

@@ -1,9 +1,9 @@
 ﻿using ExpenseTracker.API.Controllers.RequestModels;
+using ExpenseTracker.API.Helpers;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace ExpenseTracker.API.Controllers
 {
@@ -26,7 +26,7 @@ namespace ExpenseTracker.API.Controllers
         [HttpGet]
         public async Task<ActionResult<List<MonthlyExpenses>>> GetExpensesByYear([FromQuery] int year)
         {
-            var result = await _expenseService.GetExpensesByYear(year, GetCurrentUserId());
+            var result = await _expenseService.GetExpensesByYear(year, User.GetUserId());
 
             if (result == null) 
                 return NotFound();
@@ -39,7 +39,7 @@ namespace ExpenseTracker.API.Controllers
             var expense = new Expense(requestModel.Value, 
                                       requestModel.Name, 
                                       requestModel.Date, 
-                                      GetCurrentUserId());
+                                      User.GetUserId());
 
             var result = await _expenseService.CreateExpense(expense);
 
@@ -51,15 +51,10 @@ namespace ExpenseTracker.API.Controllers
         [HttpDelete("DeleteByIds")]
         public async Task<IActionResult> DeleteByIds([FromQuery] long[] ids)
         {
-            var result = await _expenseService.DeleteByIds(ids, GetCurrentUserId());
+            var result = await _expenseService.DeleteByIds(ids, User.GetUserId());
             if (!result)
                 return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             return NoContent();
-        }
-
-        private long GetCurrentUserId()
-        {
-            return long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
         }
     }
 }

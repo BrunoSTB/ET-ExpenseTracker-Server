@@ -1,5 +1,6 @@
 ﻿using ExpenseTracker.API.Controllers.RequestModels;
 using ExpenseTracker.API.Helpers;
+using ExpenseTracker.Application.Exceptions;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Dtos;
 using ExpenseTracker.Domain.Models;
@@ -24,35 +25,44 @@ namespace ExpenseTracker.API.Controllers
         }
 
         [Authorize]
-        [HttpGet]
-        public async Task<ActionResult<User>> Get(int id)
+        [HttpGet("me")]
+        public async Task<ActionResult<UserDto>> Me()
         {
-            var result = await _userService.GetUserById(id);
+            var result = await _userService.GetUserById(User.GetUserId());
 
             if (result == null)
             {
                 return NotFound();
             }
 
-            return Ok(result);
+            return Ok(ToDto(result));
         }
 
         [HttpPost]
         [Route("Register")]
-        public async Task<ActionResult<User>> Create([FromBody] CreateUserRequestModel requestBody)
+        public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserRequestModel requestBody)
         {
             var user = new User(requestBody.Username, requestBody.Password)
             {
                 Email = requestBody.Email
             };
-            var result = await _userService.CreateUser(user);
+
+            User? result;
+            try
+            {
+                result = await _userService.CreateUser(user);
+            }
+            catch (UsernameAlreadyTakenException)
+            {
+                return Conflict("Username already taken.");
+            }
 
             if (result == null)
             {
                 return BadRequest("Registration failed.");
             }
 
-            return Ok(result);
+            return Ok(ToDto(result));
         }
 
         [HttpPost]
@@ -68,6 +78,11 @@ namespace ExpenseTracker.API.Controllers
             }
             var result = new LoginDto(expectedUser.Username, AuthHelpers.GenerateJWTToken(expectedUser));
             return Ok(result);
+        }
+
+        private static UserDto ToDto(User user)
+        {
+            return new UserDto(user.Id, user.Username, user.Email);
         }
     }
 }
