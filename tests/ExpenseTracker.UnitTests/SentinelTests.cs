@@ -4,10 +4,6 @@ using NSubstitute;
 
 namespace ExpenseTracker.UnitTests;
 
-/// <summary>
-/// Teste sentinela: prova que o pipeline de testes (xUnit, NSubstitute, AwesomeAssertions
-/// e referências a Domain/Application) roda de ponta a ponta. Não testa regra de negócio.
-/// </summary>
 public class SentinelTests
 {
     [Fact]
