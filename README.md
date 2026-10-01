@@ -1,6 +1,6 @@
 # ExpenseTracker Server
 
-A RESTful API backend for managing personal expenses, built with ASP.NET Core 9 and Clean Architecture.
+A RESTful API backend for managing personal expenses, built with ASP.NET Core 10 and Clean Architecture.
 
 ## Tech Stack
 
