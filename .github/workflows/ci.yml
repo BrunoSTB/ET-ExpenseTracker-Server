@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ExpenseTracker.sln
+
+      - name: Build
+        run: dotnet build ExpenseTracker.sln --no-restore --configuration Release
+
+      - name: Test
+        run: >
+          dotnet test ExpenseTracker.sln
+          --no-build
+          --configuration Release
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+          --logger "console;verbosity=normal"
+
+      - name: Install ReportGenerator
+        if: ${{ !cancelled() }}
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.11
+
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: |
+          reportgenerator \
+            -reports:"./TestResults/**/coverage.cobertura.xml" \
+            -targetdir:./coverage-report \
+            -reporttypes:"MarkdownSummaryGithub;Cobertura"
+          cat ./coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report/
+          if-no-files-found: ignore

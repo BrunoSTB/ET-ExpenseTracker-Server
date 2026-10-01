@@ -43,3 +43,6 @@ msbuild.err
 msbuild.wrn
 
 .fake
+
+TestResults/
+coverage-report/

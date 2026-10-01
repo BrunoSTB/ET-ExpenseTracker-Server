@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Configuração e pacotes comuns vêm de tests/Directory.Build.props. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ExpenseTracker.Domain\ExpenseTracker.Domain.csproj" />
+    <ProjectReference Include="..\..\ExpenseTracker.Application\ExpenseTracker.Application.csproj" />
+  </ItemGroup>
+
+</Project>
