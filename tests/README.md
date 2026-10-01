@@ -1,31 +1,31 @@
-# Testes
+# Tests
 
-Toda a estrutura de testes do servidor fica em `tests/`, separada por **tipo de teste** e organizada internamente por **camada**.
+All server tests live under `tests/`, split by **test type** and organized internally by **layer**.
 
 ```
 tests/
-├── Directory.Build.props            # configuração e pacotes comuns a todo projeto de teste
-├── coverage.runsettings             # configuração de cobertura (exclusões)
-├── README.md                        # este arquivo
+├── Directory.Build.props            # configuration and packages shared by every test project
+├── coverage.runsettings             # coverage configuration (exclusions)
+├── README.md                        # this file
 ├── ExpenseTracker.UnitTests/
 │   ├── Domain/
 │   ├── Application/
 │   └── API/
-└── ExpenseTracker.IntegrationTests/ # (ainda não existe, criado na #12)
+└── ExpenseTracker.IntegrationTests/ # (does not exist yet, created in #12)
 ```
 
-## Ferramentas
+## Tooling
 
-| Função     | Pacote                                                                 |
+| Purpose    | Package                                                                |
 | ---------- | ---------------------------------------------------------------------- |
 | Framework  | [xUnit v3](https://xunit.net/) (`xunit.v3`)                            |
 | Mocks      | [NSubstitute](https://nsubstitute.github.io/)                          |
-| Asserções  | [AwesomeAssertions](https://awesomeassertions.org/) (fork Apache 2.0 do FluentAssertions 7) |
-| Cobertura  | `coverlet.collector` + [ReportGenerator](https://reportgenerator.io/)  |
+| Assertions | [AwesomeAssertions](https://awesomeassertions.org/) (Apache 2.0 fork of FluentAssertions 7) |
+| Coverage   | `coverlet.collector` + [ReportGenerator](https://reportgenerator.io/)  |
 
-> **Não** use o pacote `FluentAssertions` v8+ (licença comercial). A API do AwesomeAssertions é a mesma.
+> **Do not** use the `FluentAssertions` v8+ package (commercial license). AwesomeAssertions has the same API.
 
-Os pacotes, `TargetFramework`, `Nullable`, `ImplicitUsings` e os usings globais (`Xunit` e `AwesomeAssertions`) vêm do `tests/Directory.Build.props`. Um projeto de teste novo só precisa de um `.csproj` com as referências de projeto:
+The packages, `TargetFramework`, `Nullable`, `ImplicitUsings` and the global usings (`Xunit` and `AwesomeAssertions`) come from `tests/Directory.Build.props`. A new test project only needs a `.csproj` with its project references:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
@@ -35,45 +35,45 @@ Os pacotes, `TargetFramework`, `Nullable`, `ImplicitUsings` e os usings globais 
 </Project>
 ```
 
-Os projetos rodam no modo VSTest do `dotnet test` (`IsTestingPlatformApplication=false`), que é o que o `coverlet.collector` suporta.
+The projects run in `dotnet test`'s VSTest mode (`IsTestingPlatformApplication=false`), which is what `coverlet.collector` supports.
 
-## Como rodar
+## Running
 
-Na raiz do repositório:
+From the repository root:
 
 ```bash
-# todos os testes
+# all tests
 dotnet test
 
-# com cobertura
+# with coverage
 dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-# relatório de cobertura em HTML (opcional)
+# HTML coverage report (optional)
 dotnet tool install --global dotnet-reportgenerator-globaltool
 reportgenerator -reports:"./TestResults/**/coverage.cobertura.xml" -targetdir:./coverage-report -reporttypes:Html
 ```
 
-O CI (`.github/workflows/ci.yml`) roda restore → build → test com cobertura em todo pull request e em push para `main`, e publica o resumo de cobertura no job summary. Ainda não há limite mínimo de cobertura (entra na #10).
+CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on every pull request and on pushes to `main`, and publishes the coverage summary to the job summary. There is no minimum coverage threshold yet (it comes in #10).
 
-## Onde colocar cada teste
+## Where each test goes
 
-- Precisa de **banco**, do **pipeline HTTP** ou de **Docker**? Vai para `ExpenseTracker.IntegrationTests`.
-- Caso contrário, vai para `ExpenseTracker.UnitTests`.
+- Does it need a **database**, the **HTTP pipeline** or **Docker**? It goes in `ExpenseTracker.IntegrationTests`.
+- Otherwise, it goes in `ExpenseTracker.UnitTests`.
 
-## Convenções
+## Conventions
 
-- **Pastas e namespaces espelham o código de produção.**
+- **Folders and namespaces mirror the production code.**
   `ExpenseTracker.Application/Services/UserService/UserService.cs` →
   `tests/ExpenseTracker.UnitTests/Application/Services/UserService/UserServiceTests.cs`,
   namespace `ExpenseTracker.UnitTests.Application.Services.UserService`.
-- **Uma classe de teste por classe testada**, com o nome `<Classe>Tests`.
-- **Nome dos testes:** `Metodo_Cenario_ResultadoEsperado`
-  (ex.: `Login_WithWrongPassword_ReturnsNull`).
-- **Estrutura Arrange / Act / Assert**, com os três blocos comentados e separados por linha em branco.
-- **Mockar só as fronteiras:** repositórios, I/O, relógio. Código puro (ex.: `PasswordHasher`) usa a implementação real.
-- **Builders e fábricas de dados** só entram quando o segundo teste precisar deles.
+- **One test class per class under test**, named `<Class>Tests`.
+- **Test names:** `Method_Scenario_ExpectedResult`
+  (e.g. `Login_WithWrongPassword_ReturnsNull`).
+- **Arrange / Act / Assert structure**, with the three blocks commented and separated by a blank line.
+- **Only mock boundaries:** repositories, I/O, the clock. Pure code (e.g. `PasswordHasher`) uses the real implementation.
+- **Data builders and factories** are only added when a second test needs them.
 
-### Exemplo
+### Example
 
 ```csharp
 using ExpenseTracker.Application.Interfaces;
