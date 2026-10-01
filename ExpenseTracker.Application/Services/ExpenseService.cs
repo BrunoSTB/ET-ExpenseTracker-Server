@@ -1,7 +1,7 @@
-﻿using ExpenseTracker.Application.Interfaces;
+﻿using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Domain.Models;
 
-namespace ExpenseTracker.Application.Services.ExpenseService
+namespace ExpenseTracker.Application.Services
 {
     public class ExpenseService : IExpenseService
     {

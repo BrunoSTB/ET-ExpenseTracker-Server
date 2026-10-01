@@ -1,8 +1,9 @@
-using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Application.IRepositories;
+using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Models;
 using NSubstitute;
 
-namespace ExpenseTracker.UnitTests.Application.Services.ExpenseService;
+namespace ExpenseTracker.UnitTests.Application.Services;
 
 public class ExpenseServiceTests
 {
@@ -18,7 +19,7 @@ public class ExpenseServiceTests
         };
         var repository = Substitute.For<IExpenseRepository>();
         repository.GetExpensesByYear(year, userId).Returns(expected);
-        var service = new ExpenseTracker.Application.Services.ExpenseService.ExpenseService(repository);
+        var service = new ExpenseService(repository);
 
         // Act
         var result = await service.GetExpensesByYear(year, userId);

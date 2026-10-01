@@ -1,4 +1,4 @@
-using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Application.Services.ExpenseService;
 using ExpenseTracker.Application.Services.UserService;
 using ExpenseTracker.Infrastructure.DbConfiguration;

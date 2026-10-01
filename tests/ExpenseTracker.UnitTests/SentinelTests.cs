@@ -1,4 +1,4 @@
-using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Domain.Models;
 using NSubstitute;
 
