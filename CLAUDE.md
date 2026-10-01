@@ -44,7 +44,7 @@ The default `dotnet run` profile is `http` (port 5149, no Swagger env); use `--l
 Clean Architecture, four projects. Dependency direction matters:
 
 - **Domain** — plain models (`Expense`, `User`, `MonthlyExpenses`) and DTOs. No dependencies.
-- **Application** — services (`ExpenseService`, `UserService`) and the **repository interfaces** (`Application/Interfaces`). Password hashing uses `PasswordHasher<User>` from `Microsoft.Extensions.Identity.Core` here.
+- **Application** — services and their interfaces flat in `Services/` (namespace `ExpenseTracker.Application.Services`), and the **repository interfaces** in `IRepositories/` (namespace `ExpenseTracker.Application.IRepositories`). Folder = namespace, one type per file, no per-class subfolders. Password hashing uses `PasswordHasher<User>` from `Microsoft.Extensions.Identity.Core` here.
 - **Infrastructure** — references Application to implement its repository interfaces. Owns `PostgresDbContext`, EF migrations, and separate EF entities in `DbConfiguration/DataModels` (`ExpenseDataModel`, `UserDataModel`). **Repositories map manually between DataModels and Domain models** — Domain types are never tracked by EF, so a new field must be added to both the Domain model and the DataModel (plus a migration) and to the mapping code in the repository.
 - **API** — controllers, request models (`Controllers/RequestModels`), JWT generation, and all DI wiring in `Program.cs` (scoped registrations per repository/service).
 
@@ -61,9 +61,9 @@ Details in `tests/README.md`. Key points:
 - xUnit v3 + NSubstitute + **AwesomeAssertions** (do not add FluentAssertions v8+, it is commercially licensed). Packages, target framework and global usings (`Xunit`, `AwesomeAssertions`) come from `tests/Directory.Build.props`; a new test `.csproj` only needs project references.
 - Tests run in VSTest mode (`IsTestingPlatformApplication=false`) for `coverlet.collector` compatibility. Migrations are excluded from coverage via `tests/coverage.runsettings`.
 - Unit tests go in `tests/ExpenseTracker.UnitTests`; anything needing a database, the HTTP pipeline or Docker belongs in a future `ExpenseTracker.IntegrationTests` project.
-- Folders and namespaces mirror production code (e.g. `tests/ExpenseTracker.UnitTests/Application/Services/UserService/UserServiceTests.cs`). One `<Class>Tests` per class; names follow `Method_Scenario_ExpectedResult`; Arrange/Act/Assert blocks are commented.
+- Folders and namespaces mirror production code (e.g. `Application/Services/UserService.cs` → `tests/ExpenseTracker.UnitTests/Application/Services/UserServiceTests.cs`, namespace `ExpenseTracker.UnitTests.Application.Services`). One `<Class>Tests` per class; names follow `Method_Scenario_ExpectedResult`; Arrange/Act/Assert blocks are commented.
 - Mock only boundaries (repositories, I/O, clock); use real implementations for pure code like `PasswordHasher`. Add builders/factories only once a second test needs them.
-- Because service namespaces end in the class name (`...Services.UserService.UserService`), tests in a matching namespace must fully qualify the type under test.
+- Test files import the production namespace with `using` (e.g. `using ExpenseTracker.Application.Services;`) and reference the type under test by its simple name.
 
 
 

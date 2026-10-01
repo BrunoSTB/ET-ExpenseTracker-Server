@@ -1,6 +1,6 @@
 ﻿using ExpenseTracker.API.Controllers.RequestModels;
 using ExpenseTracker.API.Helpers;
-using ExpenseTracker.Application.Services.UserService;
+using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Dtos;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Authorization;

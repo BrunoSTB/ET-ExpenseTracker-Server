@@ -63,9 +63,10 @@ CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on
 ## Conventions
 
 - **Folders and namespaces mirror the production code.**
-  `ExpenseTracker.Application/Services/UserService/UserService.cs` →
-  `tests/ExpenseTracker.UnitTests/Application/Services/UserService/UserServiceTests.cs`,
-  namespace `ExpenseTracker.UnitTests.Application.Services.UserService`.
+  `ExpenseTracker.Application/Services/UserService.cs` →
+  `tests/ExpenseTracker.UnitTests/Application/Services/UserServiceTests.cs`,
+  namespace `ExpenseTracker.UnitTests.Application.Services`.
+- **Import the production namespace** with `using` and refer to the type under test by its simple name.
 - **One test class per class under test**, named `<Class>Tests`.
 - **Test names:** `Method_Scenario_ExpectedResult`
   (e.g. `Login_WithWrongPassword_ReturnsNull`).
@@ -76,11 +77,12 @@ CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on
 ### Example
 
 ```csharp
-using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Application.IRepositories;
+using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Models;
 using NSubstitute;
 
-namespace ExpenseTracker.UnitTests.Application.Services.UserService;
+namespace ExpenseTracker.UnitTests.Application.Services;
 
 public class UserServiceTests
 {
@@ -91,7 +93,7 @@ public class UserServiceTests
         var user = new User("bruno") { Id = 1 };
         var repository = Substitute.For<IUserRepository>();
         repository.GetById(1).Returns(user);
-        var service = new ExpenseTracker.Application.Services.UserService.UserService(repository);
+        var service = new UserService(repository);
 
         // Act
         var result = await service.GetUserById(1);

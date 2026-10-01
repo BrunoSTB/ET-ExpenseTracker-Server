@@ -15,7 +15,7 @@ Clean Architecture with four projects:
 
 ```
 ExpenseTracker.API            — Controllers, middleware, startup
-ExpenseTracker.Application    — Services, interfaces, business logic
+ExpenseTracker.Application    — Services (Services/), repository interfaces (IRepositories/)
 ExpenseTracker.Domain         — Entities, DTOs
 ExpenseTracker.Infrastructure — EF Core DbContext, repositories, migrations
 ```
