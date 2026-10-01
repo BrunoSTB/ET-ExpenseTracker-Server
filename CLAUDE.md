@@ -27,7 +27,7 @@ dotnet ef migrations add <Name> --project ExpenseTracker.Infrastructure --startu
 
 Migrations are applied automatically on startup (`db.Database.Migrate()` in `Program.cs`), so there is no manual `database update` step.
 
-CI (`.github/workflows/ci.yml`) runs restore → build (Release) → test with coverage on every PR and push to `main`. There is no lint step.
+CI (`.github/workflows/ci.yml`) runs restore → build (Release) → test with coverage on every PR and push to `main`, and fails if line coverage of the `Domain` or `Application` assembly is below 60%. There is no lint step.
 
 ## Runtime configuration
 

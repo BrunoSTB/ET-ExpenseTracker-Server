@@ -53,7 +53,7 @@ dotnet tool install --global dotnet-reportgenerator-globaltool
 reportgenerator -reports:"./TestResults/**/coverage.cobertura.xml" -targetdir:./coverage-report -reporttypes:Html
 ```
 
-CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on every pull request and on pushes to `main`, and publishes the coverage summary to the job summary. There is no minimum coverage threshold yet (it comes in #10).
+CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on every pull request and on pushes to `main`, and publishes the coverage summary to the job summary. The job fails if line coverage of the `ExpenseTracker.Domain` or `ExpenseTracker.Application` assembly drops below 60% (`MIN_LINE_COVERAGE` in the "Enforce coverage threshold" step).
 
 ## Where each test goes
 

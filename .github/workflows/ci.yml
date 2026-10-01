@@ -54,6 +54,33 @@ jobs:
             -reporttypes:"MarkdownSummaryGithub;Cobertura"
           cat ./coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Enforce coverage threshold
+        env:
+          MIN_LINE_COVERAGE: 60
+          ASSEMBLIES: ExpenseTracker.Domain ExpenseTracker.Application
+        run: |
+          filters=$(printf '+%s;' $ASSEMBLIES)
+          reportgenerator \
+            -reports:"./TestResults/**/coverage.cobertura.xml" \
+            -targetdir:./coverage-threshold \
+            -reporttypes:JsonSummary \
+            "-assemblyfilters:${filters%;}"
+
+          status=0
+          for assembly in $ASSEMBLIES; do
+            coverage=$(jq -r --arg name "$assembly" \
+              '.coverage.assemblies[] | select(.name == $name) | .coverage // 0' \
+              ./coverage-threshold/Summary.json)
+            coverage=${coverage:-0}
+            if awk -v c="$coverage" -v m="$MIN_LINE_COVERAGE" 'BEGIN { exit !(c < m) }'; then
+              echo "::error::$assembly line coverage is ${coverage}% (minimum ${MIN_LINE_COVERAGE}%)"
+              status=1
+            else
+              echo "$assembly line coverage: ${coverage}% (minimum ${MIN_LINE_COVERAGE}%)"
+            fi
+          done
+          exit $status
+
       - name: Upload coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
