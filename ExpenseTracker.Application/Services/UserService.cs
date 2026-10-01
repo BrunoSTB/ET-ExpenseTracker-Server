@@ -1,8 +1,8 @@
-﻿using ExpenseTracker.Application.Interfaces;
+﻿using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Identity;
 
-namespace ExpenseTracker.Application.Services.UserService
+namespace ExpenseTracker.Application.Services
 {
     public class UserService : IUserService
     {

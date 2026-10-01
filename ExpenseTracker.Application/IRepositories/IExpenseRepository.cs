@@ -1,6 +1,6 @@
 ﻿using ExpenseTracker.Domain.Models;
 
-namespace ExpenseTracker.Application.Interfaces
+namespace ExpenseTracker.Application.IRepositories
 {
     public interface IExpenseRepository
     {

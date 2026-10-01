@@ -1,7 +1,7 @@
 ﻿using ExpenseTracker.Domain.Dtos;
 using ExpenseTracker.Domain.Models;
 
-namespace ExpenseTracker.Application.Services.UserService
+namespace ExpenseTracker.Application.Services
 {
     public interface IUserService
     {

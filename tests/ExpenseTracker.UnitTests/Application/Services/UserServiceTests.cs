@@ -1,9 +1,10 @@
-using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Application.IRepositories;
+using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 
-namespace ExpenseTracker.UnitTests.Application.Services.UserService;
+namespace ExpenseTracker.UnitTests.Application.Services;
 
 public class UserServiceTests
 {
@@ -11,11 +12,11 @@ public class UserServiceTests
     private const string PlainPassword = "S3cret!";
 
     private readonly IUserRepository _repository = Substitute.For<IUserRepository>();
-    private readonly ExpenseTracker.Application.Services.UserService.UserService _service;
+    private readonly UserService _service;
 
     public UserServiceTests()
     {
-        _service = new ExpenseTracker.Application.Services.UserService.UserService(_repository);
+        _service = new UserService(_repository);
     }
 
     [Fact]

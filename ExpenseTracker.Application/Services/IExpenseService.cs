@@ -1,5 +1,5 @@
 ﻿using ExpenseTracker.Domain.Models;
-namespace ExpenseTracker.Application.Services.ExpenseService
+namespace ExpenseTracker.Application.Services
 {
     public interface IExpenseService
     {

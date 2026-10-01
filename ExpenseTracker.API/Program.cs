@@ -1,6 +1,5 @@
-using ExpenseTracker.Application.Interfaces;
-using ExpenseTracker.Application.Services.ExpenseService;
-using ExpenseTracker.Application.Services.UserService;
+using ExpenseTracker.Application.IRepositories;
+using ExpenseTracker.Application.Services;
 using ExpenseTracker.Infrastructure.DbConfiguration;
 using ExpenseTracker.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
