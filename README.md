@@ -14,9 +14,9 @@ A RESTful API backend for managing personal expenses, built with ASP.NET Core 10
 Clean Architecture with four projects:
 
 ```
-ExpenseTracker.API            — Controllers, middleware, startup
+ExpenseTracker.API            — Controllers, DTOs, middleware, startup
 ExpenseTracker.Application    — Services, repository interfaces
-ExpenseTracker.Domain         — Entities, DTOs
+ExpenseTracker.Domain         — Entities
 ExpenseTracker.Infrastructure — EF Core DbContext, repositories, migrations
 ```
 

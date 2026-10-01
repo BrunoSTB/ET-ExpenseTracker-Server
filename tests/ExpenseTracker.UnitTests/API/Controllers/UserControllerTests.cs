@@ -4,7 +4,7 @@ using ExpenseTracker.API.Controllers;
 using ExpenseTracker.API.Controllers.RequestModels;
 using ExpenseTracker.Application.Exceptions;
 using ExpenseTracker.Application.Services;
-using ExpenseTracker.Domain.Dtos;
+using ExpenseTracker.API.Dtos;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
