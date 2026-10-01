@@ -64,3 +64,8 @@ Details in `tests/README.md`. Key points:
 - Folders and namespaces mirror production code (e.g. `tests/ExpenseTracker.UnitTests/Application/Services/UserService/UserServiceTests.cs`). One `<Class>Tests` per class; names follow `Method_Scenario_ExpectedResult`; Arrange/Act/Assert blocks are commented.
 - Mock only boundaries (repositories, I/O, clock); use real implementations for pure code like `PasswordHasher`. Add builders/factories only once a second test needs them.
 - Because service namespaces end in the class name (`...Services.UserService.UserService`), tests in a matching namespace must fully qualify the type under test.
+
+
+
+## Code Conventions
+- Avoid Comments.
