@@ -2,7 +2,7 @@
 {
     public class MonthlyExpenses
     {
-        public decimal TotalExpenses { get; set; }
+        public decimal TotalExpenses => Expenses.Sum(x => x.Value);
         public int ExpensesMonth { get; set; }
         public List<Expense> Expenses { get; set; }
 
@@ -11,7 +11,6 @@
         {
             ExpensesMonth = expensesMonth;
             Expenses = expenses;
-            TotalExpenses = expenses.Sum(x => x.Value);
         }
     }
 }

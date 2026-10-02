@@ -5,7 +5,7 @@ namespace ExpenseTracker.UnitTests.Domain.Models;
 public class MonthlyExpensesTests
 {
     [Fact]
-    public void Constructor_WithEmptyList_SetsTotalExpensesToZero()
+    public void TotalExpenses_WithEmptyList_ReturnsZero()
     {
         // Arrange
         var expenses = new List<Expense>();
@@ -18,7 +18,7 @@ public class MonthlyExpensesTests
     }
 
     [Fact]
-    public void Constructor_WithDecimalValues_SumsWithoutPrecisionLoss()
+    public void TotalExpenses_WithDecimalValues_SumsWithoutPrecisionLoss()
     {
         // Arrange
         var expenses = new List<Expense>
@@ -35,7 +35,7 @@ public class MonthlyExpensesTests
     }
 
     [Fact]
-    public void Constructor_WhenExpensesChangeAfterConstruction_KeepsOriginalTotal()
+    public void TotalExpenses_WhenExpensesChangeAfterConstruction_ReflectsCurrentExpenses()
     {
         // Arrange
         var expenses = new List<Expense>
@@ -48,6 +48,6 @@ public class MonthlyExpensesTests
         monthlyExpenses.Expenses.Add(new Expense(5m, "Bread", new DateTime(2026, 1, 2), 1));
 
         // Assert
-        monthlyExpenses.TotalExpenses.Should().Be(10m);
+        monthlyExpenses.TotalExpenses.Should().Be(15m);
     }
 }
