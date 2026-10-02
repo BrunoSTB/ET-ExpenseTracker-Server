@@ -1,4 +1,4 @@
-﻿namespace ExpenseTracker.Domain.Dtos
+﻿namespace ExpenseTracker.API.Dtos
 {
     public class LoginDto
     {

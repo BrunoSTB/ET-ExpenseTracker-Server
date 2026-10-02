@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Exceptions;
 using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Models;
@@ -36,6 +37,20 @@ public class UserServiceTests
         new PasswordHasher<User>()
             .VerifyHashedPassword(persisted, persisted.Password!, PlainPassword)
             .Should().NotBe(PasswordVerificationResult.Failed);
+    }
+
+    [Fact]
+    public async Task CreateUser_WithTakenUsername_ThrowsUsernameAlreadyTakenException()
+    {
+        // Arrange
+        _repository.GetByUsername(Username).Returns(CreateStoredUser());
+
+        // Act
+        var act = () => _service.CreateUser(new User(Username, PlainPassword));
+
+        // Assert
+        await act.Should().ThrowAsync<UsernameAlreadyTakenException>();
+        await _repository.DidNotReceive().CreateUser(Arg.Any<User>());
     }
 
     [Fact]

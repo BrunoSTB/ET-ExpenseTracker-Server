@@ -43,16 +43,16 @@ The default `dotnet run` profile is `http` (port 5149, no Swagger env); use `--l
 
 Clean Architecture, four projects. Dependency direction matters:
 
-- **Domain** — plain models (`Expense`, `User`, `MonthlyExpenses`) and DTOs. No dependencies.
+- **Domain** — plain models (`Expense`, `User`, `MonthlyExpenses`). No dependencies.
 - **Application** — services and their interfaces flat in `Services/` (namespace `ExpenseTracker.Application.Services`), and the **repository interfaces** in `IRepositories/` (namespace `ExpenseTracker.Application.IRepositories`). Folder = namespace, one type per file, no per-class subfolders. Password hashing uses `PasswordHasher<User>` from `Microsoft.Extensions.Identity.Core` here.
 - **Infrastructure** — references Application to implement its repository interfaces. Owns `PostgresDbContext`, EF migrations, and separate EF entities in `DbConfiguration/DataModels` (`ExpenseDataModel`, `UserDataModel`). **Repositories map manually between DataModels and Domain models** — Domain types are never tracked by EF, so a new field must be added to both the Domain model and the DataModel (plus a migration) and to the mapping code in the repository.
-- **API** — controllers, request models (`Controllers/RequestModels`), JWT generation, and all DI wiring in `Program.cs` (scoped registrations per repository/service).
+- **API** — controllers, request models (`Controllers/RequestModels`), response DTOs (`Dtos`, namespace `ExpenseTracker.API.Dtos`), JWT generation, and all DI wiring in `Program.cs` (scoped registrations per repository/service).
 
 Request flow: Controller builds a Domain model from a RequestModel → Service (mostly a thin pass-through) → Repository (maps to DataModel, hits EF).
 
-Auth: controllers use `[Authorize]`; the current user id is read from the `ClaimTypes.NameIdentifier` claim (`GetCurrentUserId()` in `ExpenseController`). Expense queries/deletes are always scoped by that user id at the repository level. Tokens last 30 days.
+Auth: controllers use `[Authorize]`; the current user id is read from the `ClaimTypes.NameIdentifier` claim (`User.GetUserId()` from `API/Helpers/ClaimsPrincipalExtensions.cs`); never take a user id from the request. Expense queries/deletes are always scoped by that user id at the repository level. Tokens last 30 days.
 
-Error handling convention: repositories catch exceptions, log with `Console.WriteLine`, and return `null`/`false`; controllers translate those into `NotFound`/`BadRequest`/500.
+Error handling convention: repositories catch exceptions, log with `Console.WriteLine`, and return `null`/`false`; controllers translate those into `NotFound`/`BadRequest`/500. The exception is a duplicate username: the service and the repository (on a Postgres unique violation) throw `UsernameAlreadyTakenException`, which `UserController` maps to `409 Conflict`. Controllers return DTOs (`API/Dtos`), never the `User` domain model, so the password hash is never serialized.
 
 ## Tests
 

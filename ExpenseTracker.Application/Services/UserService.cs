@@ -1,4 +1,5 @@
-﻿using ExpenseTracker.Application.IRepositories;
+﻿using ExpenseTracker.Application.Exceptions;
+using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -20,6 +21,11 @@ namespace ExpenseTracker.Application.Services
 
         public async Task<User?> CreateUser(User user)
         {
+            if (await _userRepository.GetByUsername(user.Username) != null)
+            {
+                throw new UsernameAlreadyTakenException(user.Username);
+            }
+
             var hasher = new PasswordHasher<User>();
             user.Password = hasher.HashPassword(user, user.Password!);
             var result = await _userRepository.CreateUser(user);
