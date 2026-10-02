@@ -26,7 +26,7 @@ ExpenseTracker.Infrastructure — EF Core DbContext, repositories, migrations
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/user/Register` | Register a new user (`409 Conflict` if the username is taken) |
+| `POST` | `/user/Register` | Register a new user |
 | `POST` | `/user/Login` | Login and receive a JWT token |
 
 ### Users (JWT required)
