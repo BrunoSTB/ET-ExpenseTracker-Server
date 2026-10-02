@@ -1,7 +1,8 @@
-**/bin/
-**/obj/
-**/.vs/
-.git/
+**/bin
+**/obj
+.vs
+**/.vs
+.git
 .gitignore
 README.md
-tests/
+tests
