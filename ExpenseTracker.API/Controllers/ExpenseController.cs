@@ -26,7 +26,7 @@ namespace ExpenseTracker.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<MonthlyExpenses>>> GetExpensesByYear([FromQuery, BindRequired, Range(1900, 9999)] int year)
+        public async Task<ActionResult<List<MonthlyExpenses>>> GetExpensesByYear([FromQuery, BindRequired, Range(1900, 2200)] int year)
         {
             var result = await _expenseService.GetExpensesByYear(year, User.GetUserId());
 

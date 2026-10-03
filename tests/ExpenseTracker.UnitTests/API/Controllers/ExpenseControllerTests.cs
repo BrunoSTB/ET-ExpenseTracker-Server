@@ -56,9 +56,10 @@ public class ExpenseControllerTests
     [Theory]
     [InlineData(0, false)]
     [InlineData(1899, false)]
-    [InlineData(10000, false)]
+    [InlineData(2201, false)]
     [InlineData(1900, true)]
     [InlineData(2026, true)]
+    [InlineData(2200, true)]
     public void GetExpensesByYear_YearParameter_IsValidatedWithinRange(int year, bool expectedValid)
     {
         // Act
