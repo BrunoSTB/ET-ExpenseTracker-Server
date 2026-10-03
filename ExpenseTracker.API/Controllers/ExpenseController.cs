@@ -4,6 +4,8 @@ using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.ComponentModel.DataAnnotations;
 
 namespace ExpenseTracker.API.Controllers
 {
@@ -24,7 +26,7 @@ namespace ExpenseTracker.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<MonthlyExpenses>>> GetExpensesByYear([FromQuery] int year)
+        public async Task<ActionResult<List<MonthlyExpenses>>> GetExpensesByYear([FromQuery, BindRequired, Range(1900, 9999)] int year)
         {
             var result = await _expenseService.GetExpensesByYear(year, User.GetUserId());
 
@@ -38,7 +40,7 @@ namespace ExpenseTracker.API.Controllers
         {
             var expense = new Expense(requestModel.Value, 
                                       requestModel.Name, 
-                                      requestModel.Date, 
+                                      requestModel.ExpenseDate!.Value, 
                                       User.GetUserId());
 
             var result = await _expenseService.CreateExpense(expense);
@@ -49,7 +51,7 @@ namespace ExpenseTracker.API.Controllers
         }
 
         [HttpDelete("DeleteByIds")]
-        public async Task<IActionResult> DeleteByIds([FromQuery] long[] ids)
+        public async Task<IActionResult> DeleteByIds([FromQuery(Name = "ids"), Required, MinLength(1)] long[] ids)
         {
             var result = await _expenseService.DeleteByIds(ids, User.GetUserId());
             if (!result)
