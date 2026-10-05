@@ -17,7 +17,7 @@ namespace ExpenseTracker.Application.Services
             return await _expenseRepository.GetExpenseAsync(id);
         }
 
-        public async Task<Expense?> CreateExpense(Expense expense)
+        public async Task<Expense> CreateExpense(Expense expense)
         {
             return await _expenseRepository.CreateExpense(expense);
         }
@@ -27,7 +27,7 @@ namespace ExpenseTracker.Application.Services
             return await _expenseRepository.GetExpensesByYear(year, userId);
         }
 
-        public async Task<bool> DeleteByIds(long[] expensesIds, long userId)
+        public async Task<int> DeleteByIds(long[] expensesIds, long userId)
         {
             return await _expenseRepository.DeleteByIds(expensesIds, userId);
         }

@@ -36,7 +36,7 @@ public class ExpenseControllerTests
     }
 
     [Fact]
-    public async Task Create_WithValidRequest_CreatesExpenseForCurrentUserWithExpenseDate()
+    public async Task Create_WithValidRequest_ReturnsCreatedExpenseForCurrentUserWithExpenseDate()
     {
         // Arrange
         var request = new CreateExpenseRequestModel { Name = "Coffee", Value = 10m, ExpenseDate = new DateTime(2026, 3, 1) };
@@ -46,11 +46,56 @@ public class ExpenseControllerTests
         var result = await _controller.Create(request);
 
         // Assert
-        var expense = result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Expense>().Subject;
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status201Created);
+        var expense = objectResult.Value.Should().BeOfType<Expense>().Subject;
         expense.Name.Should().Be("Coffee");
         expense.Value.Should().Be(10m);
         expense.ExpenseDate.Should().Be(new DateTime(2026, 3, 1));
         expense.UserId.Should().Be(CurrentUserId);
+    }
+
+    [Fact]
+    public async Task GetExpensesByYear_WithNoExpenses_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        _expenseService.GetExpensesByYear(2026, CurrentUserId).Returns(new List<MonthlyExpenses>());
+
+        // Act
+        var result = await _controller.GetExpensesByYear(2026);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<List<MonthlyExpenses>>().Which.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteByIds_WhenExpensesAreDeleted_ReturnsNoContent()
+    {
+        // Arrange
+        long[] ids = [1, 2];
+        _expenseService.DeleteByIds(ids, CurrentUserId).Returns(2);
+
+        // Act
+        var result = await _controller.DeleteByIds(ids);
+
+        // Assert
+        result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task DeleteByIds_WhenNoExpenseMatches_ReturnsNotFoundProblem()
+    {
+        // Arrange
+        long[] ids = [99];
+        _expenseService.DeleteByIds(ids, CurrentUserId).Returns(0);
+
+        // Act
+        var result = await _controller.DeleteByIds(ids);
+
+        // Assert
+        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Status.Should().Be(StatusCodes.Status404NotFound);
     }
 
     [Theory]

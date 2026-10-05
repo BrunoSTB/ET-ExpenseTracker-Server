@@ -1,3 +1,4 @@
+using ExpenseTracker.API.Handlers;
 using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Infrastructure.DbConfiguration;
@@ -17,6 +18,8 @@ builder.Services.AddDbContext<PostgresDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var corsOrigins = Environment.GetEnvironmentVariable("CORSOrigins")!
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -95,7 +98,9 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// Configure the HTTP request pipeline.
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

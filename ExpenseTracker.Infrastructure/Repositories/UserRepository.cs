@@ -32,7 +32,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
             };
         }
 
-        public async Task<User?> CreateUser(User user)
+        public async Task<User> CreateUser(User user)
         {
             try
             {
@@ -50,11 +50,6 @@ namespace ExpenseTracker.Infrastructure.Repositories
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
             {
                 throw new UsernameAlreadyTakenException(user.Username, ex);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Exception while trying to create new User. exception: " + ex.Message);
-                return null;
             }
         }
 

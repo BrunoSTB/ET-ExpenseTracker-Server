@@ -79,7 +79,7 @@ public class UserControllerTests
     }
 
     [Fact]
-    public async Task Create_WhenRegistrationSucceeds_ReturnsCreatedIdWithoutPassword()
+    public async Task Create_WhenRegistrationSucceeds_ReturnsCreatedUserWithoutPassword()
     {
         // Arrange
         _userService.CreateUser(Arg.Any<User>())
@@ -89,14 +89,16 @@ public class UserControllerTests
         var result = await _controller.Create(new CreateUserRequestModel("bruno", "S3cret!", "bruno@example.com"));
 
         // Assert
-        var dto = result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<UserDto>().Subject;
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status201Created);
+        var dto = objectResult.Value.Should().BeOfType<UserDto>().Subject;
         dto.Id.Should().Be(7);
         dto.Username.Should().Be("bruno");
         JsonSerializer.Serialize(dto).Should().NotContainEquivalentOf("password");
     }
 
     [Fact]
-    public async Task Create_WithTakenUsername_ReturnsConflict()
+    public async Task Create_WithTakenUsername_ReturnsConflictProblem()
     {
         // Arrange
         _userService.CreateUser(Arg.Any<User>()).ThrowsAsync(new UsernameAlreadyTakenException("bruno"));
@@ -105,19 +107,23 @@ public class UserControllerTests
         var result = await _controller.Create(new CreateUserRequestModel("bruno", "S3cret!", "bruno@example.com"));
 
         // Assert
-        result.Result.Should().BeOfType<ConflictObjectResult>();
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Status.Should().Be(StatusCodes.Status409Conflict);
     }
 
     [Fact]
-    public async Task Create_WhenServiceFails_ReturnsBadRequest()
+    public async Task Login_WithInvalidCredentials_ReturnsUnauthorizedProblem()
     {
         // Arrange
-        _userService.CreateUser(Arg.Any<User>()).Returns((User?)null);
+        _userService.Login(Arg.Any<User>()).Returns((User?)null);
 
         // Act
-        var result = await _controller.Create(new CreateUserRequestModel("bruno", "S3cret!", "bruno@example.com"));
+        var result = await _controller.Login(new LoginRequestModel("bruno", "wrong-password"));
 
         // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Status.Should().Be(StatusCodes.Status401Unauthorized);
     }
 }

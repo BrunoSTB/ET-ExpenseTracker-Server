@@ -29,9 +29,6 @@ namespace ExpenseTracker.API.Controllers
         public async Task<ActionResult<List<MonthlyExpenses>>> GetExpensesByYear([FromQuery, BindRequired, Range(1900, 2200)] int year)
         {
             var result = await _expenseService.GetExpensesByYear(year, User.GetUserId());
-
-            if (result == null) 
-                return NotFound();
             return Ok(result);
         }
 
@@ -44,18 +41,19 @@ namespace ExpenseTracker.API.Controllers
                                       User.GetUserId());
 
             var result = await _expenseService.CreateExpense(expense);
-
-            if (result == null)
-                return NotFound();
-            return Ok(result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
 
         [HttpDelete("DeleteByIds")]
         public async Task<IActionResult> DeleteByIds([FromQuery(Name = "ids"), Required, MinLength(1)] long[] ids)
         {
-            var result = await _expenseService.DeleteByIds(ids, User.GetUserId());
-            if (!result)
-                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+            var userId = User.GetUserId();
+            var deletedCount = await _expenseService.DeleteByIds(ids, userId);
+            if (deletedCount == 0)
+            {
+                _logger.LogInformation("No expenses deleted for user {UserId}; none of the ids {Ids} were found", userId, ids);
+                return Problem(statusCode: StatusCodes.Status404NotFound, title: "No expenses were found for the given ids.");
+            }
             return NoContent();
         }
     }

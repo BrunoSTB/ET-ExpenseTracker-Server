@@ -19,7 +19,7 @@ namespace ExpenseTracker.Application.Services
             return await _userRepository.GetById(id);
         }
 
-        public async Task<User?> CreateUser(User user)
+        public async Task<User> CreateUser(User user)
         {
             if (await _userRepository.GetByUsername(user.Username) != null)
             {
