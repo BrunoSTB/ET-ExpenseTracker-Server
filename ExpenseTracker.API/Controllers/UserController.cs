@@ -28,10 +28,12 @@ namespace ExpenseTracker.API.Controllers
         [HttpGet("me")]
         public async Task<ActionResult<UserDto>> Me()
         {
-            var result = await _userService.GetUserById(User.GetUserId());
+            var userId = User.GetUserId();
+            var result = await _userService.GetUserById(userId);
 
             if (result == null)
             {
+                _logger.LogWarning("Authenticated user {UserId} was not found", userId);
                 return NotFound();
             }
 
@@ -47,22 +49,18 @@ namespace ExpenseTracker.API.Controllers
                 Email = requestBody.Email
             };
 
-            User? result;
+            User result;
             try
             {
                 result = await _userService.CreateUser(user);
             }
             catch (UsernameAlreadyTakenException)
             {
-                return Conflict("Username already taken.");
+                _logger.LogInformation("Registration rejected because the username is already taken");
+                return Problem(statusCode: StatusCodes.Status409Conflict, title: "Username already taken.");
             }
 
-            if (result == null)
-            {
-                return BadRequest("Registration failed.");
-            }
-
-            return Ok(ToDto(result));
+            return StatusCode(StatusCodes.Status201Created, ToDto(result));
         }
 
         [HttpPost]
@@ -74,7 +72,8 @@ namespace ExpenseTracker.API.Controllers
 
             if (expectedUser == null)
             {
-                return BadRequest("Incorrect username or password");
+                _logger.LogInformation("Failed login attempt");
+                return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Incorrect username or password.");
             }
             var result = new LoginDto(expectedUser.Username, AuthHelpers.GenerateJWTToken(expectedUser));
             return Ok(result);

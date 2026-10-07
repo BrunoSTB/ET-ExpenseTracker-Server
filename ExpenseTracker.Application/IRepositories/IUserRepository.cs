@@ -6,6 +6,6 @@ namespace ExpenseTracker.Application.IRepositories
     {
         Task<User?> GetById(long id);
         Task<User?> GetByUsername(string username);
-        Task<User?> CreateUser(User user);
+        Task<User> CreateUser(User user);
     }
 }

@@ -5,7 +5,7 @@ namespace ExpenseTracker.Application.Services
     {
         Task<Expense?> GetExpenseById(int id);
         Task<List<MonthlyExpenses>> GetExpensesByYear(int year, long userId);
-        Task<Expense?> CreateExpense(Expense expense);
-        Task<bool> DeleteByIds(long[] expensesIds, long userId);
+        Task<Expense> CreateExpense(Expense expense);
+        Task<int> DeleteByIds(long[] expensesIds, long userId);
     }
 }

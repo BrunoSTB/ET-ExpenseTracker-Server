@@ -9,12 +9,10 @@ namespace ExpenseTracker.Infrastructure.Repositories
     public class ExpenseRepository : IExpenseRepository
     {
         public PostgresDbContext Context { get; }
-        public IUserRepository UserRepository { get; }
 
-        public ExpenseRepository(PostgresDbContext context, IUserRepository userRepository)
+        public ExpenseRepository(PostgresDbContext context)
         {
             Context = context;
-            UserRepository = userRepository;
         }
 
         public async Task<Expense?> GetExpenseAsync(int id)
@@ -22,34 +20,25 @@ namespace ExpenseTracker.Infrastructure.Repositories
             throw new NotImplementedException();
         }
 
-        public async Task<Expense?> CreateExpense(Expense expense)
+        public async Task<Expense> CreateExpense(Expense expense)
         {
-            try
+            var newEntry = new ExpenseDataModel()
             {
-                var newEntry = new ExpenseDataModel() 
-                { 
-                    ExpenseDate = expense.ExpenseDate, 
-                    Name =  expense.Name,
-                    Value = expense.Value,
-                    User = Context.Users.First(x => x.Id == expense.UserId),
-                    UserId = expense.UserId
-                };
+                ExpenseDate = expense.ExpenseDate,
+                Name = expense.Name,
+                Value = expense.Value,
+                UserId = expense.UserId
+            };
 
-                var result = await Context.Expenses.AddAsync(newEntry);
-                Context.SaveChanges();
-                return new Expense(result.Entity.Value,
-                                   result.Entity.Name!,
-                                   result.Entity.ExpenseDate,
-                                   result.Entity.UserId)
-                       { 
-                            Id = result.Entity.Id
-                       };
-            }
-            catch (Exception ex) 
-            {
-                Console.WriteLine("Exception while trying to create new Expense. exception: " + ex.Message);
-                return null;
-            }
+            var result = await Context.Expenses.AddAsync(newEntry);
+            await Context.SaveChangesAsync();
+            return new Expense(result.Entity.Value,
+                               result.Entity.Name,
+                               result.Entity.ExpenseDate,
+                               result.Entity.UserId)
+                   {
+                        Id = result.Entity.Id
+                   };
         }
 
         public async Task<List<MonthlyExpenses>> GetExpensesByYear(int year, long userId)
@@ -62,20 +51,11 @@ namespace ExpenseTracker.Infrastructure.Repositories
             return result;
         }
 
-        public async Task<bool> DeleteByIds(long[] ids, long userId)
+        public async Task<int> DeleteByIds(long[] ids, long userId)
         {
-            try
-            {
-                await Context.Expenses
-                    .Where(x => ids.Contains(x.Id) && x.UserId == userId)
-                    .ExecuteDeleteAsync();
-                return true;
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine("Exception in repository while trying to delete by multiple Ids: " + ex.Message);
-                return false;
-            }
+            return await Context.Expenses
+                .Where(x => ids.Contains(x.Id) && x.UserId == userId)
+                .ExecuteDeleteAsync();
         }
     }
 }
