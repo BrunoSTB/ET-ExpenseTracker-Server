@@ -1,39 +1,52 @@
+using ExpenseTracker.API.Configuration;
 using ExpenseTracker.API.Handlers;
+using ExpenseTracker.API.Services;
 using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Infrastructure.DbConfiguration;
 using ExpenseTracker.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using System.Text;
+using AspNetCorsOptions = Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions;
+using CorsOptions = ExpenseTracker.API.Configuration.CorsOptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = Environment.GetEnvironmentVariable("SqlConnectionString")
-    ?? "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;";
+builder.Services.AddOptions<ConnectionStringsOptions>()
+    .Bind(builder.Configuration.GetSection(ConnectionStringsOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<CorsOptions>()
+    .Bind(builder.Configuration.GetSection(CorsOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
-builder.Services.AddDbContext<PostgresDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<PostgresDbContext>((serviceProvider, options) =>
+    options.UseNpgsql(serviceProvider.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value.Default));
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-var corsOrigins = Environment.GetEnvironmentVariable("CORSOrigins")!
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAngularDev",
-        builder =>
-        {
-            builder.WithOrigins(corsOrigins)
-                   .AllowAnyMethod()
-                   .AllowAnyHeader()
-                   .AllowCredentials();
-        });
-});
+builder.Services.AddCors();
+builder.Services.AddOptions<AspNetCorsOptions>()
+    .Configure<IOptions<CorsOptions>>((options, corsOptions) =>
+    {
+        options.AddPolicy("AllowAngularDev",
+            builder =>
+            {
+                builder.WithOrigins(corsOptions.Value.GetOrigins())
+                       .AllowAnyMethod()
+                       .AllowAnyHeader()
+                       .AllowCredentials();
+            });
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
@@ -71,18 +84,13 @@ builder.Services.AddAuthentication(cfg => {
 }).AddJwtBearer(x => {
     x.RequireHttpsMetadata = true;
     x.SaveToken = false;
-    x.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8
-            .GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET")!)
-        ),
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ClockSkew = TimeSpan.Zero
-    };
 });
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((options, jwtOptions) =>
+        options.TokenValidationParameters = jwtOptions.Value.CreateTokenValidationParameters());
+
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -91,6 +99,8 @@ builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 
 var app = builder.Build();
+
+app.Services.GetRequiredService<IStartupValidator>().Validate();
 
 using (var scope = app.Services.CreateScope())
 {

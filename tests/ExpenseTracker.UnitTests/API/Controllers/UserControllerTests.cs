@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using ExpenseTracker.API.Controllers;
 using ExpenseTracker.API.Controllers.RequestModels;
+using ExpenseTracker.API.Services;
 using ExpenseTracker.Application.Exceptions;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.API.Dtos;
@@ -19,11 +20,12 @@ public class UserControllerTests
     private const long CurrentUserId = 42;
 
     private readonly IUserService _userService = Substitute.For<IUserService>();
+    private readonly ITokenService _tokenService = Substitute.For<ITokenService>();
     private readonly UserController _controller;
 
     public UserControllerTests()
     {
-        _controller = new UserController(NullLogger<UserController>.Instance, _userService)
+        _controller = new UserController(NullLogger<UserController>.Instance, _userService, _tokenService)
         {
             ControllerContext = new ControllerContext
             {
@@ -125,5 +127,21 @@ public class UserControllerTests
         var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
         objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Status.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    public async Task Login_WithValidCredentials_ReturnsTokenFromTokenService()
+    {
+        // Arrange
+        var user = new User("bruno", "hashed-password") { Id = CurrentUserId };
+        _userService.Login(Arg.Any<User>()).Returns(user);
+        _tokenService.GenerateToken(user).Returns("generated-token");
+
+        // Act
+        var result = await _controller.Login(new LoginRequestModel("bruno", "S3cret!pass"));
+
+        // Assert
+        var dto = result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<LoginDto>().Subject;
+        dto.Should().BeEquivalentTo(new LoginDto("bruno", "generated-token"));
     }
 }

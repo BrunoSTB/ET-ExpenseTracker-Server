@@ -48,15 +48,38 @@ ExpenseTracker.Infrastructure — EF Core DbContext, repositories, migrations
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download)
 - PostgreSQL instance (local, Docker, or hosted)
 
-## Environment Variables
+## Configuration
 
-The following environment variables must be set before running:
+Configuration is bound to typed options (`ExpenseTracker.API/Configuration`)
+through the standard ASP.NET Core configuration system, so every setting can
+come from `appsettings.json`, environment variables (use `__` as the section
+separator), user secrets, etc. All options are validated on startup: a missing
+or invalid value stops the app immediately with a message naming the setting.
 
-| Variable | Description |
-|----------|-------------|
-| `SqlConnectionString` | PostgreSQL (Npgsql) connection string |
-| `JWT_SECRET` | Secret key used to sign JWT tokens |
-| `CORSOrigins` | Comma-separated list of allowed frontend origins |
+| Setting | Environment variable | Required | Description |
+|---------|----------------------|----------|-------------|
+| `ConnectionStrings:Default` | `ConnectionStrings__Default` | yes | PostgreSQL (Npgsql) connection string. There is no fallback. |
+| `Jwt:Secret` | `Jwt__Secret` | yes | Key used to sign and validate JWT tokens (HS256). Must be at least **32 bytes**. |
+| `Jwt:Issuer` | `Jwt__Issuer` | default in `appsettings.json` (`ExpenseTracker.API`) | Token issuer; validated on every request. |
+| `Jwt:Audience` | `Jwt__Audience` | default in `appsettings.json` (`ExpenseTracker.Client`) | Token audience; validated on every request. |
+| `Jwt:ExpirationMinutes` | `Jwt__ExpirationMinutes` | default in `appsettings.json` (`10080`, 7 days) | Token lifetime, between 1 and 43200 (30 days). |
+| `Cors:AllowedOrigins` | `Cors__AllowedOrigins` | yes | Comma-separated list of allowed frontend origins, as `scheme://host[:port]` without a trailing slash. |
+
+Generate a secret with e.g. `openssl rand -base64 48`.
+
+### Migrating from the old variable names
+
+The previous ad-hoc variables are no longer read. Rename them in every
+environment (local shell, `launchSettings.json`, Docker, Azure):
+
+| Old | New |
+|-----|-----|
+| `SqlConnectionString` | `ConnectionStrings__Default` |
+| `JWT_SECRET` | `Jwt__Secret` (now must be ≥ 32 bytes) |
+| `CORSOrigins` | `Cors__AllowedOrigins` (no trailing slash) |
+
+Tokens now carry and are validated against an issuer and audience, so tokens
+issued before this change are rejected and users have to log in again.
 
 ## Getting Started
 
@@ -65,12 +88,13 @@ The following environment variables must be set before running:
 Swagger). **`dotnet run` uses `http` by default** — pass `--launch-profile
 https` explicitly to get HTTPS and match the Swagger URL below.
 
-The `https` profile ships with `SqlConnectionString`/`CORSOrigins` set to
-local defaults, but `JWT_SECRET` is intentionally left blank so no real
+The `https` profile ships with `ConnectionStrings__Default`/`Cors__AllowedOrigins`
+set to local defaults, but `Jwt__Secret` is intentionally left blank so no real
 secret is committed to the repo. Fill it in locally (edit
-`launchSettings.json` or export it as shown below) before running — an
-empty `JWT_SECRET` makes the app fail fast on startup instead of silently
-signing tokens with a known key.
+`launchSettings.json`, export it as shown below, or use
+`dotnet user-secrets set "Jwt:Secret" "<secret>" --project ExpenseTracker.API`)
+before running — an empty or short secret makes the app fail fast on startup
+instead of silently signing tokens with a weak key.
 
 ### Linux / macOS (bash)
 
@@ -80,9 +104,9 @@ git clone <repository-url>
 cd ET-ExpenseTracker-Server
 
 # Set environment variables (example for bash)
-export SqlConnectionString="Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
-export JWT_SECRET="your-secret-key"
-export CORSOrigins="http://localhost:4200"
+export ConnectionStrings__Default="Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+export Jwt__Secret="$(openssl rand -base64 48)"
+export Cors__AllowedOrigins="http://localhost:4200"
 
 # Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
 dotnet run --project ExpenseTracker.API --launch-profile https
@@ -96,9 +120,9 @@ git clone <repository-url>
 cd ET-ExpenseTracker-Server
 
 # Set environment variables (current session only)
-$env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
-$env:JWT_SECRET = "your-secret-key"
-$env:CORSOrigins = "http://localhost:4200"
+$env:ConnectionStrings__Default = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+$env:Jwt__Secret = "<a random secret of at least 32 bytes>"
+$env:Cors__AllowedOrigins = "http://localhost:4200"
 
 # Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
 dotnet run --project ExpenseTracker.API --launch-profile https
@@ -109,9 +133,9 @@ window. To persist them across sessions, use `setx` instead (requires a new
 terminal to take effect):
 
 ```powershell
-setx SqlConnectionString "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
-setx JWT_SECRET "your-secret-key"
-setx CORSOrigins "http://localhost:4200"
+setx ConnectionStrings__Default "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+setx Jwt__Secret "<a random secret of at least 32 bytes>"
+setx Cors__AllowedOrigins "http://localhost:4200"
 ```
 
 Swagger UI is available at `https://localhost:7010/swagger` when running in development.
@@ -126,23 +150,20 @@ docker compose up -d --build
 ```
 
 The API applies pending EF Core migrations automatically on startup, so no
-manual `dotnet ef database update` step is needed. Edit `JWT_SECRET` in
-`docker-compose.yml` before deploying anywhere reachable from the internet.
+manual `dotnet ef database update` step is needed. Edit `Jwt__Secret` in
+`docker-compose.yml` (at least 32 bytes) before deploying anywhere reachable
+from the internet.
 
 ## Deploying to Azure Container Apps + Neon/Supabase
 
 ### 1. Create the Postgres database
 
 Create a free project on [Neon](https://neon.tech) or [Supabase](https://supabase.com)
-and grab the connection details. Build the `SqlConnectionString` in .NET
+and grab the connection details. Build the `ConnectionStrings__Default` value in .NET
 format (note to get the connection string from: Direct Connection String, Connection method Session Pooler):
 
 ```
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=aws-0-sa-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.zixxlxpnxvbyihflykme;Password=[YOUR-PASSWORD];SSL Mode=Require;Trust Server Certificate=true"
-  }
-}
+Host=aws-0-sa-east-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.zixxlxpnxvbyihflykme;Password=[YOUR-PASSWORD];SSL Mode=Require;Trust Server Certificate=true
 ```
 
 ### 2. Build and push the image, then deploy
@@ -167,9 +188,9 @@ az containerapp create \
   --ingress external \
   --min-replicas 0 --max-replicas 1 \
   --env-vars \
-    SqlConnectionString="Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;" \
-    JWT_SECRET="<a long random secret — do not reuse the local dev value>" \
-    CORSOrigins="https://your-frontend-domain.com"
+    ConnectionStrings__Default="Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;" \
+    Jwt__Secret="<a random secret of at least 32 bytes — do not reuse the local dev value>" \
+    Cors__AllowedOrigins="https://your-frontend-domain.com"
 ```
 
 Azure Container Apps terminates HTTPS for you and issues a free
@@ -180,6 +201,18 @@ trade-off is a few seconds of cold-start latency on the first request after
 idling. Set `--min-replicas 1` only if you want an always-warm instance —
 that runs 24/7 and will likely exceed the free grant, incurring a small
 monthly cost.
+
+If the app was deployed with the old variable names, rename them before
+redeploying (otherwise the new image fails on startup):
+
+```bash
+az containerapp update --name expense-tracker-api --resource-group expense-tracker-rg \
+  --remove-env-vars SqlConnectionString JWT_SECRET CORSOrigins \
+  --set-env-vars \
+    ConnectionStrings__Default="<connection string>" \
+    Jwt__Secret="<secret of at least 32 bytes>" \
+    Cors__AllowedOrigins="https://your-frontend-domain.com"
+```
 
 ### 3. Redeploying after changes
 
@@ -197,4 +230,5 @@ Register a user, then call `/user/Login` to receive a JWT token. Include it in s
 Authorization: Bearer <token>
 ```
 
-Tokens are valid for **30 days**.
+Tokens are valid for `Jwt:ExpirationMinutes` (**7 days** by default) and are
+validated against the configured issuer and audience.
