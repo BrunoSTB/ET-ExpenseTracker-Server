@@ -54,9 +54,9 @@ namespace ExpenseTracker.API.Controllers
             {
                 result = await _userService.CreateUser(user);
             }
-            catch (UsernameAlreadyTakenException ex)
+            catch (UsernameAlreadyTakenException)
             {
-                _logger.LogInformation(ex, "Registration rejected: username {Username} is already taken", user.Username);
+                _logger.LogInformation("Registration rejected because the username is already taken");
                 return Problem(statusCode: StatusCodes.Status409Conflict, title: "Username already taken.");
             }
 
@@ -72,7 +72,7 @@ namespace ExpenseTracker.API.Controllers
 
             if (expectedUser == null)
             {
-                _logger.LogInformation("Failed login attempt for username {Username}", requestBody.Username);
+                _logger.LogInformation("Failed login attempt");
                 return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Incorrect username or password.");
             }
             var result = new LoginDto(expectedUser.Username, AuthHelpers.GenerateJWTToken(expectedUser));

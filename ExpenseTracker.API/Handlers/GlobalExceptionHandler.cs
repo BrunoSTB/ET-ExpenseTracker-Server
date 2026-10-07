@@ -17,8 +17,7 @@ namespace ExpenseTracker.API.Handlers
 
         public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
         {
-            _logger.LogError(exception, "Unhandled exception while processing {Method} {Path}",
-                             httpContext.Request.Method, httpContext.Request.Path);
+            _logger.LogError(exception, "Unhandled exception while processing the request");
 
             httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 

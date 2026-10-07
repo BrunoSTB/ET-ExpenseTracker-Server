@@ -51,7 +51,7 @@ namespace ExpenseTracker.API.Controllers
             var deletedCount = await _expenseService.DeleteByIds(ids, userId);
             if (deletedCount == 0)
             {
-                _logger.LogInformation("No expenses deleted for user {UserId}; none of the ids {Ids} were found", userId, ids);
+                _logger.LogInformation("No expenses deleted for user {UserId}; none of the {IdCount} requested ids were found", userId, ids.Length);
                 return Problem(statusCode: StatusCodes.Status404NotFound, title: "No expenses were found for the given ids.");
             }
             return NoContent();
