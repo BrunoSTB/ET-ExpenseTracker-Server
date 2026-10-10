@@ -34,7 +34,7 @@ CI (`.github/workflows/ci.yml`) runs restore → build (Release) → test with c
 Configuration comes from **environment variables read directly via `Environment.GetEnvironmentVariable`**, not `IConfiguration`/appsettings:
 
 - `SqlConnectionString` — Npgsql connection string (falls back to a localhost default).
-- `JWT_SECRET` — used both to validate tokens (`Program.cs`) and to sign them (`API/Helpers/AuthHelpers.cs`). Intentionally blank in `launchSettings.json`; must be set locally.
+- `JWT_SECRET` (≥ 32 bytes), `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_EXPIRATION_MINUTES` — loaded into `API/Options/JwtOptions.cs` (validated with `ValidateDataAnnotations` + `ValidateOnStart`, so a missing/short secret fails at startup). `JwtOptions` is the single source for both token signing (`API/Services/TokenService.cs`, injected as `ITokenService`) and JWT bearer validation in `Program.cs`. Only the secret is required; it is intentionally blank in `launchSettings.json` and must be set locally.
 - `CORSOrigins` — comma-separated; required, the app crashes at startup if unset.
 
 The default `dotnet run` profile is `http` (port 5149, no Swagger env); use `--launch-profile https` for local dev.
@@ -50,7 +50,7 @@ Clean Architecture, four projects. Dependency direction matters:
 
 Request flow: Controller builds a Domain model from a RequestModel → Service (mostly a thin pass-through) → Repository (maps to DataModel, hits EF).
 
-Auth: controllers use `[Authorize]`; the current user id is read from the `ClaimTypes.NameIdentifier` claim (`User.GetUserId()` from `API/Helpers/ClaimsPrincipalExtensions.cs`); never take a user id from the request. Expense queries/deletes are always scoped by that user id at the repository level. Tokens last 30 days.
+Auth: controllers use `[Authorize]`; the current user id is read from the `ClaimTypes.NameIdentifier` claim (`User.GetUserId()` from `API/Helpers/ClaimsPrincipalExtensions.cs`); never take a user id from the request. Expense queries/deletes are always scoped by that user id at the repository level. Tokens validate signature, issuer, audience and lifetime; they last 30 days by default.
 
 Error handling convention: repositories do not catch exceptions (the one exception is a Postgres unique violation on user insert, translated to `UsernameAlreadyTakenException`); anything unexpected propagates to `API/Handlers/GlobalExceptionHandler.cs` (`IExceptionHandler`), which logs it via `ILogger` and answers `500` as ProblemDetails. `AddProblemDetails` + `UseStatusCodePages` make every error response `application/problem+json`; controllers return errors with `Problem(statusCode: ...)` or the bodiless helpers (`NotFound()`), never plain strings. Status codes: `201` on create (register, expense), `401` on invalid login, `409` on a taken username (`UserController` catches `UsernameAlreadyTakenException`), `404` only when the resource really does not exist (e.g. `DeleteByIds` deleted nothing). Do not use `Console.WriteLine`; use the injected `ILogger`. Use async EF APIs (`SaveChangesAsync`, `FirstOrDefaultAsync`) inside async methods. Controllers return DTOs (`API/Dtos`), never the `User` domain model, so the password hash is never serialized.
 

@@ -1,6 +1,7 @@
 ﻿using ExpenseTracker.API.Controllers.RequestModels;
 using ExpenseTracker.API.Dtos;
 using ExpenseTracker.API.Helpers;
+using ExpenseTracker.API.Services;
 using ExpenseTracker.Application.Exceptions;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Models;
@@ -16,12 +17,15 @@ namespace ExpenseTracker.API.Controllers
 
         private readonly ILogger<UserController> _logger;
         private readonly IUserService _userService;
+        private readonly ITokenService _tokenService;
 
         public UserController(ILogger<UserController> logger,
-                              IUserService userService)
+                              IUserService userService,
+                              ITokenService tokenService)
         {
             _logger = logger;
             _userService = userService;
+            _tokenService = tokenService;
         }
 
         [Authorize]
@@ -75,7 +79,7 @@ namespace ExpenseTracker.API.Controllers
                 _logger.LogInformation("Failed login attempt");
                 return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Incorrect username or password.");
             }
-            var result = new LoginDto(expectedUser.Username, AuthHelpers.GenerateJWTToken(expectedUser));
+            var result = new LoginDto(expectedUser.Username, _tokenService.GenerateToken(expectedUser));
             return Ok(result);
         }
 
