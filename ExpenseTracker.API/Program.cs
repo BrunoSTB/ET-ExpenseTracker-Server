@@ -1,13 +1,14 @@
 using ExpenseTracker.API.Handlers;
+using ExpenseTracker.API.Options;
+using ExpenseTracker.API.Services;
 using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Infrastructure.DbConfiguration;
 using ExpenseTracker.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +65,12 @@ builder.Services.AddSwaggerGen(c => {
     });
 });
 
+builder.Services.AddOptions<JwtOptions>()
+    .Configure(options => options.LoadFromEnvironment())
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddSingleton<ITokenService, TokenService>();
+
 builder.Services.AddAuthentication(cfg => {
     cfg.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     cfg.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -71,18 +78,10 @@ builder.Services.AddAuthentication(cfg => {
 }).AddJwtBearer(x => {
     x.RequireHttpsMetadata = true;
     x.SaveToken = false;
-    x.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8
-            .GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET")!)
-        ),
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ClockSkew = TimeSpan.Zero
-    };
 });
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((bearer, jwt) =>
+        bearer.TokenValidationParameters = jwt.Value.CreateValidationParameters());
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();

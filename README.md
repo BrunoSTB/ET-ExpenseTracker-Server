@@ -55,7 +55,10 @@ The following environment variables must be set before running:
 | Variable | Description |
 |----------|-------------|
 | `SqlConnectionString` | PostgreSQL (Npgsql) connection string |
-| `JWT_SECRET` | Secret key used to sign JWT tokens |
+| `JWT_SECRET` | Secret key used to sign and validate JWT tokens (at least 32 bytes) |
+| `JWT_ISSUER` | Optional. Token issuer (default `ExpenseTracker.API`) |
+| `JWT_AUDIENCE` | Optional. Token audience (default `ExpenseTracker.Client`) |
+| `JWT_EXPIRATION_MINUTES` | Optional. Token lifetime in minutes (default `43200`, 30 days) |
 | `CORSOrigins` | Comma-separated list of allowed frontend origins |
 
 ## Getting Started
@@ -68,9 +71,13 @@ https` explicitly to get HTTPS and match the Swagger URL below.
 The `https` profile ships with `SqlConnectionString`/`CORSOrigins` set to
 local defaults, but `JWT_SECRET` is intentionally left blank so no real
 secret is committed to the repo. Fill it in locally (edit
-`launchSettings.json` or export it as shown below) before running — an
-empty `JWT_SECRET` makes the app fail fast on startup instead of silently
-signing tokens with a known key.
+`launchSettings.json` or export it as shown below) before running — a
+missing `JWT_SECRET`, or one shorter than 32 bytes, makes the app fail fast
+on startup with an explicit message. Existing deployments only need to make
+sure their secret is long enough; the other `JWT_*` variables have defaults.
+Changing `JWT_ISSUER`/`JWT_AUDIENCE` invalidates tokens issued before the
+change, and tokens issued before this validation existed (no issuer or
+audience) are rejected, so users have to log in again once.
 
 ### Linux / macOS (bash)
 
@@ -81,7 +88,7 @@ cd ET-ExpenseTracker-Server
 
 # Set environment variables (example for bash)
 export SqlConnectionString="Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
-export JWT_SECRET="your-secret-key"
+export JWT_SECRET="your-secret-key-of-at-least-32-bytes"
 export CORSOrigins="http://localhost:4200"
 
 # Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
@@ -97,7 +104,7 @@ cd ET-ExpenseTracker-Server
 
 # Set environment variables (current session only)
 $env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
-$env:JWT_SECRET = "your-secret-key"
+$env:JWT_SECRET = "your-secret-key-of-at-least-32-bytes"
 $env:CORSOrigins = "http://localhost:4200"
 
 # Run the API with HTTPS + Swagger (database migrations are applied automatically on startup)
@@ -110,7 +117,7 @@ terminal to take effect):
 
 ```powershell
 setx SqlConnectionString "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
-setx JWT_SECRET "your-secret-key"
+setx JWT_SECRET "your-secret-key-of-at-least-32-bytes"
 setx CORSOrigins "http://localhost:4200"
 ```
 
@@ -168,7 +175,9 @@ az containerapp create \
   --min-replicas 0 --max-replicas 1 \
   --env-vars \
     SqlConnectionString="Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;" \
-    JWT_SECRET="<a long random secret — do not reuse the local dev value>" \
+    JWT_SECRET="<a random secret of at least 32 bytes — do not reuse the local dev value>" \
+    JWT_ISSUER="https://your-api-domain.com" \
+    JWT_AUDIENCE="https://your-frontend-domain.com" \
     CORSOrigins="https://your-frontend-domain.com"
 ```
 
