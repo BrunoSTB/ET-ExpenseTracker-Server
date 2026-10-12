@@ -14,7 +14,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public const string JwtAudience = "ExpenseTracker.IntegrationTests.Audience";
 
     public IUserRepository UserRepository { get; } = Substitute.For<IUserRepository>();
-    public IExpenseRepository ExpenseRepository { get; } = Substitute.For<IExpenseRepository>();
 
     public HttpClient CreateApiClient()
     {
@@ -39,7 +38,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.AddScoped(_ => UserRepository);
-            services.AddScoped(_ => ExpenseRepository);
         });
     }
 }

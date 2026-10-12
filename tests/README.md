@@ -12,7 +12,8 @@ tests/
 │   ├── Application/
 │   └── API/
 └── ExpenseTracker.IntegrationTests/
-    ├── Infrastructure/              # CustomWebApplicationFactory, TestTokens
+    ├── Infrastructure/              # CustomWebApplicationFactory, TestTokens, PostgresFixture
+    │   └── Repositories/            # repository tests against PostgreSQL (Testcontainers)
     └── Api/                         # HTTP contract tests per controller
 ```
 
@@ -64,14 +65,24 @@ CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on
 
 ## Integration tests
 
-`ExpenseTracker.IntegrationTests` runs the real HTTP pipeline in memory with `WebApplicationFactory<Program>` (`Microsoft.AspNetCore.Mvc.Testing`): routing, model binding and validation, `[Authorize]` and JWT validation, claims, status codes and the `application/problem+json` format. No database or Docker is needed.
+`ExpenseTracker.IntegrationTests` has two kinds of tests:
 
-- `Infrastructure/CustomWebApplicationFactory.cs` starts the API in the `Testing` environment with test configuration (a dummy connection string, `Database:MigrateOnStartup=false`, `CORSOrigins` and `JWT_*`) supplied through `UseSetting`, so no process environment variables are read or written. It replaces `IUserRepository` and `IExpenseRepository` with NSubstitute substitutes exposed as `UserRepository` and `ExpenseRepository`; services, `PasswordHasher` and `TokenService` stay real.
+- **API tests** (`Api/`) run the real HTTP pipeline in memory with `WebApplicationFactory<Program>` (`Microsoft.AspNetCore.Mvc.Testing`): routing, model binding and validation, `[Authorize]` and JWT validation, claims, status codes and the `application/problem+json` format. No database is needed.
+- **Repository tests** (`Infrastructure/Repositories/`) run against a real PostgreSQL. They need a running Docker daemon.
+
+### API tests
+
+- `Infrastructure/CustomWebApplicationFactory.cs` starts the API in the `Testing` environment with test configuration (a dummy connection string, `Database:MigrateOnStartup=false`, `CORSOrigins` and `JWT_*`) supplied through `UseSetting`, so no process environment variables are read or written. It replaces `IUserRepository` with an NSubstitute substitute exposed as `UserRepository`; services, `PasswordHasher` and `TokenService` stay real.
 - `Infrastructure/TestTokens.cs` creates valid tokens with the API's own `ITokenService` and invalid ones (wrong issuer, wrong audience, expired, other signing key).
 - Each test class creates its own factory and disposes it (`IAsyncDisposable`), so substitutes never leak between tests.
 - Every new endpoint, or change to an endpoint's status codes, validation or authorization, gets a test in `Api/<Controller>EndpointsTests.cs` checking the HTTP contract.
 
-Tests that need a real PostgreSQL database will also live in this project.
+### Repository tests
+
+- `Infrastructure/PostgresFixture.cs` is an xUnit assembly fixture: it starts one `postgres:17-alpine` container with [Testcontainers](https://dotnet.testcontainers.org/) for the whole test run, applies the EF migrations, and hands out fresh `PostgresDbContext` instances (`CreateContext`).
+- Tests do not clean tables. Each test creates its own users with `CreateUserAsync` and only looks at their data, which also exercises the per-user filters.
+- Use a fresh context for each repository call, so assertions read from the database and not from EF's change tracker.
+- They cover what only the database enforces: unique indexes, foreign keys, check constraints and the per-user filters.
 
 ## Conventions
 
