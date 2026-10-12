@@ -20,7 +20,7 @@ namespace ExpenseTracker.API.Options
         [Range(1, int.MaxValue, ErrorMessage = "JWT_EXPIRATION_MINUTES must be a positive integer.")]
         public int ExpirationMinutes { get; set; } = 60 * 24 * 30;
 
-        public SymmetricSecurityKey SigningKey => new(Encoding.UTF8.GetBytes(Secret));
+        public SymmetricSecurityKey CreateSigningKey() => new(Encoding.UTF8.GetBytes(Secret));
 
         public void LoadFromEnvironment()
         {
@@ -40,7 +40,7 @@ namespace ExpenseTracker.API.Options
             return new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = SigningKey,
+                IssuerSigningKey = CreateSigningKey(),
                 ValidateIssuer = true,
                 ValidIssuer = Issuer,
                 ValidateAudience = true,
