@@ -69,11 +69,18 @@ Swagger). **`dotnet run` uses `http` by default** — pass `--launch-profile
 https` explicitly to get HTTPS and match the Swagger URL below.
 
 The `https` profile ships with `ConnectionStrings__DefaultConnection`/`CORSOrigins` set to
-local defaults, but `JWT_SECRET` is intentionally left blank so no real
-secret is committed to the repo. Fill it in locally (edit
-`launchSettings.json` or export it as shown below) before running — a
-missing `JWT_SECRET`, or one shorter than 32 bytes, makes the app fail fast
-on startup with an explicit message. Existing deployments only need to make
+local defaults, but does not define `JWT_SECRET`, so no real secret is
+committed to the repo. Export it in your shell as shown below before running
+— a missing `JWT_SECRET`, or one shorter than 32 bytes, makes the app fail
+fast on startup with an explicit message.
+
+Variables defined in a launch profile **override** the ones exported in your
+shell, so with `--launch-profile https` the exported
+`ConnectionStrings__DefaultConnection` and `CORSOrigins` are replaced by the
+profile's values. To use different values, edit the profile or run without it
+(`--no-launch-profile`, in which case set `ASPNETCORE_ENVIRONMENT=Development`
+yourself for Swagger). Do not add `JWT_SECRET` to the profile, not even
+empty: an empty value would override the exported secret. Existing deployments only need to make
 sure their secret is long enough; the other `JWT_*` variables have defaults.
 Changing `JWT_ISSUER`/`JWT_AUDIENCE` invalidates tokens issued before the
 change, and tokens issued before this validation existed (no issuer or

@@ -28,7 +28,6 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ConnectionStrings__DefaultConnection": "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;",
-        "JWT_SECRET": "",
         "CORSOrigins": "http://localhost:4200"
       }
     },
