@@ -54,12 +54,12 @@ The following environment variables must be set before running:
 
 | Variable | Description |
 |----------|-------------|
-| `SqlConnectionString` | PostgreSQL (Npgsql) connection string |
+| `ConnectionStrings__DefaultConnection` | PostgreSQL (Npgsql) connection string |
 | `JWT_SECRET` | Secret key used to sign and validate JWT tokens (at least 32 bytes) |
 | `JWT_ISSUER` | Optional. Token issuer (default `ExpenseTracker.API`) |
 | `JWT_AUDIENCE` | Optional. Token audience (default `ExpenseTracker.Client`) |
 | `JWT_EXPIRATION_MINUTES` | Optional. Token lifetime in minutes (default `43200`, 30 days) |
-| `CORSOrigins` | Comma-separated list of allowed frontend origins |
+| `CORSOrigins` | Comma-separated list of allowed frontend origins, each as `scheme://host[:port]` (no path or trailing slash) |
 
 ## Getting Started
 
@@ -68,7 +68,7 @@ The following environment variables must be set before running:
 Swagger). **`dotnet run` uses `http` by default** — pass `--launch-profile
 https` explicitly to get HTTPS and match the Swagger URL below.
 
-The `https` profile ships with `SqlConnectionString`/`CORSOrigins` set to
+The `https` profile ships with `ConnectionStrings__DefaultConnection`/`CORSOrigins` set to
 local defaults, but `JWT_SECRET` is intentionally left blank so no real
 secret is committed to the repo. Fill it in locally (edit
 `launchSettings.json` or export it as shown below) before running — a
@@ -79,6 +79,11 @@ Changing `JWT_ISSUER`/`JWT_AUDIENCE` invalidates tokens issued before the
 change, and tokens issued before this validation existed (no issuer or
 audience) are rejected, so users have to log in again once.
 
+The connection string and `CORSOrigins` are validated the same way: if either
+is missing or malformed, the app refuses to start and lists every problem
+before touching the database. There is no built-in default connection string,
+so it must always be set.
+
 ### Linux / macOS (bash)
 
 ```bash
@@ -87,7 +92,7 @@ git clone <repository-url>
 cd ET-ExpenseTracker-Server
 
 # Set environment variables (example for bash)
-export SqlConnectionString="Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+export ConnectionStrings__DefaultConnection="Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
 export JWT_SECRET="your-secret-key-of-at-least-32-bytes"
 export CORSOrigins="http://localhost:4200"
 
@@ -103,7 +108,7 @@ git clone <repository-url>
 cd ET-ExpenseTracker-Server
 
 # Set environment variables (current session only)
-$env:SqlConnectionString = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+$env:ConnectionStrings__DefaultConnection = "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
 $env:JWT_SECRET = "your-secret-key-of-at-least-32-bytes"
 $env:CORSOrigins = "http://localhost:4200"
 
@@ -116,7 +121,7 @@ window. To persist them across sessions, use `setx` instead (requires a new
 terminal to take effect):
 
 ```powershell
-setx SqlConnectionString "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+setx ConnectionStrings__DefaultConnection "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;"
 setx JWT_SECRET "your-secret-key-of-at-least-32-bytes"
 setx CORSOrigins "http://localhost:4200"
 ```
@@ -141,7 +146,7 @@ manual `dotnet ef database update` step is needed. Edit `JWT_SECRET` in
 ### 1. Create the Postgres database
 
 Create a free project on [Neon](https://neon.tech) or [Supabase](https://supabase.com)
-and grab the connection details. Build the `SqlConnectionString` in .NET
+and grab the connection details. Build the connection string in .NET
 format (note to get the connection string from: Direct Connection String, Connection method Session Pooler):
 
 ```
@@ -174,7 +179,7 @@ az containerapp create \
   --ingress external \
   --min-replicas 0 --max-replicas 1 \
   --env-vars \
-    SqlConnectionString="Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;" \
+    ConnectionStrings__DefaultConnection="Host=<your-host>;Database=<your-db>;Username=<your-user>;Password=<your-password>;Ssl Mode=Require;" \
     JWT_SECRET="<a random secret of at least 32 bytes — do not reuse the local dev value>" \
     JWT_ISSUER="https://your-api-domain.com" \
     JWT_AUDIENCE="https://your-frontend-domain.com" \

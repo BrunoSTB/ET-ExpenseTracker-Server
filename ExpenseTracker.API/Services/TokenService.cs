@@ -29,7 +29,7 @@ namespace ExpenseTracker.API.Services
                 claims: claims,
                 notBefore: now,
                 expires: now.AddMinutes(_options.ExpirationMinutes),
-                signingCredentials: new SigningCredentials(_options.SigningKey, SecurityAlgorithms.HmacSha256Signature));
+                signingCredentials: new SigningCredentials(_options.CreateSigningKey(), SecurityAlgorithms.HmacSha256Signature));
             return new JwtSecurityTokenHandler().WriteToken(jwtToken);
         }
     }

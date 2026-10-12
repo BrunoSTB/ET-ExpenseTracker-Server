@@ -31,11 +31,11 @@ CI (`.github/workflows/ci.yml`) runs restore → build (Release) → test with c
 
 ## Runtime configuration
 
-Configuration comes from **environment variables read directly via `Environment.GetEnvironmentVariable`**, not `IConfiguration`/appsettings:
+Configuration comes from **environment variables**, loaded into typed options classes in `API/Options` that are validated with `ValidateDataAnnotations` + `ValidateOnStart`. `Program.cs` runs `IStartupValidator.Validate()` right after `Build()`, so every missing/invalid setting is reported at once, before migrations touch the database:
 
-- `SqlConnectionString` — Npgsql connection string (falls back to a localhost default).
+- `ConnectionStrings__DefaultConnection` — Npgsql connection string, read via `IConfiguration` into `API/Options/DatabaseOptions.cs`. Required, must parse and specify a `Host`; there is no default and no credentials in code.
 - `JWT_SECRET` (≥ 32 bytes), `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_EXPIRATION_MINUTES` — loaded into `API/Options/JwtOptions.cs` (validated with `ValidateDataAnnotations` + `ValidateOnStart`, so a missing/short secret fails at startup). `JwtOptions` is the single source for both token signing (`API/Services/TokenService.cs`, injected as `ITokenService`) and JWT bearer validation in `Program.cs`. Only the secret is required; it is intentionally blank in `launchSettings.json` and must be set locally.
-- `CORSOrigins` — comma-separated; required, the app crashes at startup if unset.
+- `CORSOrigins` — comma-separated, read via `IConfiguration` into `API/Options/CorsOptions.cs`. Required; each origin must be `http(s)://host[:port]` with no path or trailing slash.
 
 The default `dotnet run` profile is `http` (port 5149, no Swagger env); use `--launch-profile https` for local dev.
 

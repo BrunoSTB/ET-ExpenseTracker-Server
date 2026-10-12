@@ -27,9 +27,9 @@
       "applicationUrl": "https://localhost:7010;http://localhost:5149",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "SqlConnectionString": "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;",
+        "ConnectionStrings__DefaultConnection": "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;",
         "JWT_SECRET": "",
-        "CORSOrigins": "http://localhost:4200/"
+        "CORSOrigins": "http://localhost:4200"
       }
     },
     "IIS Express": {

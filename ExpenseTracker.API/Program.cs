@@ -9,32 +9,33 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using AspNetCorsOptions = Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = Environment.GetEnvironmentVariable("SqlConnectionString")
-    ?? "Host=localhost;Database=ExpenseTracker;Username=postgres;Password=postgres;";
-
-builder.Services.AddDbContext<PostgresDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddOptions<DatabaseOptions>()
+    .Configure<IConfiguration>((options, configuration) => options.Load(configuration))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddDbContext<PostgresDbContext>((services, options) =>
+    options.UseNpgsql(services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString));
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-var corsOrigins = Environment.GetEnvironmentVariable("CORSOrigins")!
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAngularDev",
-        builder =>
-        {
-            builder.WithOrigins(corsOrigins)
-                   .AllowAnyMethod()
-                   .AllowAnyHeader()
-                   .AllowCredentials();
-        });
-});
+builder.Services.AddOptions<CorsOptions>()
+    .Configure<IConfiguration>((options, configuration) => options.Load(configuration))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddCors();
+builder.Services.AddOptions<AspNetCorsOptions>()
+    .Configure<IOptions<CorsOptions>>((cors, frontend) =>
+        cors.AddPolicy(CorsOptions.PolicyName, policy => policy
+            .WithOrigins(frontend.Value.Origins)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
@@ -91,6 +92,8 @@ builder.Services.AddScoped<IExpenseService, ExpenseService>();
 
 var app = builder.Build();
 
+app.Services.GetRequiredService<IStartupValidator>().Validate();
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<PostgresDbContext>();
@@ -107,7 +110,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAngularDev");
+app.UseCors(CorsOptions.PolicyName);
 
 app.UseAuthentication();
 app.UseAuthorization();

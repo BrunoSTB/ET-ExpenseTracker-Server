@@ -23,7 +23,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SqlConnectionString: "Host=db;Database=ExpenseTracker;Username=postgres;Password=postgres;"
+      ConnectionStrings__DefaultConnection: "Host=db;Database=ExpenseTracker;Username=postgres;Password=postgres;"
       JWT_SECRET: "change-this-to-a-random-secret-of-at-least-32-bytes"
       JWT_ISSUER: "ExpenseTracker.API"
       JWT_AUDIENCE: "ExpenseTracker.Client"
