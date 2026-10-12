@@ -54,7 +54,7 @@ The following environment variables must be set before running:
 
 | Variable | Description |
 |----------|-------------|
-| `ConnectionStrings__DefaultConnection` | PostgreSQL (Npgsql) connection string. The legacy `SqlConnectionString` is still accepted as a fallback |
+| `ConnectionStrings__DefaultConnection` | PostgreSQL (Npgsql) connection string |
 | `JWT_SECRET` | Secret key used to sign and validate JWT tokens (at least 32 bytes) |
 | `JWT_ISSUER` | Optional. Token issuer (default `ExpenseTracker.API`) |
 | `JWT_AUDIENCE` | Optional. Token audience (default `ExpenseTracker.Client`) |
@@ -81,11 +81,8 @@ audience) are rejected, so users have to log in again once.
 
 The connection string and `CORSOrigins` are validated the same way: if either
 is missing or malformed, the app refuses to start and lists every problem
-before touching the database. There is no built-in default connection string
-anymore, so it must always be set. Existing deployments using
-`SqlConnectionString` keep working; migrate to
-`ConnectionStrings__DefaultConnection` at your convenience (it wins when both
-are set).
+before touching the database. There is no built-in default connection string,
+so it must always be set.
 
 ### Linux / macOS (bash)
 

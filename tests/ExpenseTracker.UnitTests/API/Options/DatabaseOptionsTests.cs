@@ -12,11 +12,7 @@ public class DatabaseOptionsTests
     public void Load_WithConnectionStringsSection_UsesIt()
     {
         // Arrange
-        var configuration = BuildConfiguration(new()
-        {
-            ["ConnectionStrings:DefaultConnection"] = "Host=primary",
-            ["SqlConnectionString"] = "Host=legacy"
-        });
+        var configuration = BuildConfiguration(new() { ["ConnectionStrings:DefaultConnection"] = "Host=primary" });
         var options = new DatabaseOptions();
 
         // Act
@@ -24,20 +20,6 @@ public class DatabaseOptionsTests
 
         // Assert
         options.ConnectionString.Should().Be("Host=primary");
-    }
-
-    [Fact]
-    public void Load_WithOnlyLegacyVariable_FallsBackToIt()
-    {
-        // Arrange
-        var configuration = BuildConfiguration(new() { ["SqlConnectionString"] = "Host=legacy" });
-        var options = new DatabaseOptions();
-
-        // Act
-        options.Load(configuration);
-
-        // Assert
-        options.ConnectionString.Should().Be("Host=legacy");
     }
 
     [Fact]

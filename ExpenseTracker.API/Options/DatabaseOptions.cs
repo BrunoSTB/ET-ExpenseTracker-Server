@@ -6,16 +6,13 @@ namespace ExpenseTracker.API.Options
     public class DatabaseOptions : IValidatableObject
     {
         public const string ConnectionStringName = "DefaultConnection";
-        public const string LegacyVariable = "SqlConnectionString";
 
-        [Required(ErrorMessage = "A database connection string is required. Set ConnectionStrings__DefaultConnection (or the legacy SqlConnectionString).")]
+        [Required(ErrorMessage = "A database connection string is required. Set ConnectionStrings__DefaultConnection.")]
         public string ConnectionString { get; set; } = string.Empty;
 
         public void Load(IConfiguration configuration)
         {
-            ConnectionString = configuration.GetConnectionString(ConnectionStringName)
-                ?? configuration[LegacyVariable]
-                ?? string.Empty;
+            ConnectionString = configuration.GetConnectionString(ConnectionStringName) ?? string.Empty;
         }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
