@@ -22,13 +22,13 @@ namespace ExpenseTracker.API.Options
 
         public SymmetricSecurityKey CreateSigningKey() => new(Encoding.UTF8.GetBytes(Secret));
 
-        public void LoadFromEnvironment()
+        public void Load(IConfiguration configuration)
         {
-            Secret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? string.Empty;
-            Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? Issuer;
-            Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? Audience;
+            Secret = configuration["JWT_SECRET"] ?? string.Empty;
+            Issuer = configuration["JWT_ISSUER"] ?? Issuer;
+            Audience = configuration["JWT_AUDIENCE"] ?? Audience;
 
-            var expiration = Environment.GetEnvironmentVariable("JWT_EXPIRATION_MINUTES");
+            var expiration = configuration["JWT_EXPIRATION_MINUTES"];
             if (expiration != null)
             {
                 ExpirationMinutes = int.TryParse(expiration, out var minutes) ? minutes : 0;

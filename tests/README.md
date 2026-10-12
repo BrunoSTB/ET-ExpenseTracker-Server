@@ -11,7 +11,9 @@ tests/
 │   ├── Domain/
 │   ├── Application/
 │   └── API/
-└── ExpenseTracker.IntegrationTests/ # (does not exist yet, created in #12)
+└── ExpenseTracker.IntegrationTests/
+    ├── Infrastructure/              # CustomWebApplicationFactory, TestTokens
+    └── Api/                         # HTTP contract tests per controller
 ```
 
 ## Tooling
@@ -59,6 +61,17 @@ CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on
 
 - Does it need a **database**, the **HTTP pipeline** or **Docker**? It goes in `ExpenseTracker.IntegrationTests`.
 - Otherwise, it goes in `ExpenseTracker.UnitTests`.
+
+## Integration tests
+
+`ExpenseTracker.IntegrationTests` runs the real HTTP pipeline in memory with `WebApplicationFactory<Program>` (`Microsoft.AspNetCore.Mvc.Testing`): routing, model binding and validation, `[Authorize]` and JWT validation, claims, status codes and the `application/problem+json` format. No database or Docker is needed.
+
+- `Infrastructure/CustomWebApplicationFactory.cs` starts the API in the `Testing` environment with test configuration (a dummy connection string, `Database:MigrateOnStartup=false`, `CORSOrigins` and `JWT_*`) supplied through `UseSetting`, so no process environment variables are read or written. It replaces `IUserRepository` and `IExpenseRepository` with NSubstitute substitutes exposed as `UserRepository` and `ExpenseRepository`; services, `PasswordHasher` and `TokenService` stay real.
+- `Infrastructure/TestTokens.cs` creates valid tokens with the API's own `ITokenService` and invalid ones (wrong issuer, wrong audience, expired, other signing key).
+- Each test class creates its own factory and disposes it (`IAsyncDisposable`), so substitutes never leak between tests.
+- Every new endpoint, or change to an endpoint's status codes, validation or authorization, gets a test in `Api/<Controller>EndpointsTests.cs` checking the HTTP contract.
+
+Tests that need a real PostgreSQL database will also live in this project.
 
 ## Conventions
 

@@ -67,7 +67,7 @@ builder.Services.AddSwaggerGen(c => {
 });
 
 builder.Services.AddOptions<JwtOptions>()
-    .Configure(options => options.LoadFromEnvironment())
+    .Configure<IConfiguration>((options, configuration) => options.Load(configuration))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 builder.Services.AddSingleton<ITokenService, TokenService>();
@@ -94,8 +94,9 @@ var app = builder.Build();
 
 app.Services.GetRequiredService<IStartupValidator>().Validate();
 
-using (var scope = app.Services.CreateScope())
+if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.MigrateOnStartup)
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PostgresDbContext>();
     db.Database.Migrate();
 }

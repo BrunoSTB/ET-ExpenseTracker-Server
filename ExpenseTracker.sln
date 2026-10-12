@@ -27,6 +27,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpenseTracker.UnitTests", "tests\ExpenseTracker.UnitTests\ExpenseTracker.UnitTests.csproj", "{6CDF9196-232D-4ABF-ACF8-C3B1D9B36CA7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpenseTracker.IntegrationTests", "tests\ExpenseTracker.IntegrationTests\ExpenseTracker.IntegrationTests.csproj", "{75E28DEB-6A85-45AB-9509-3D4862842CEB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,12 +55,17 @@ Global
 		{6CDF9196-232D-4ABF-ACF8-C3B1D9B36CA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6CDF9196-232D-4ABF-ACF8-C3B1D9B36CA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6CDF9196-232D-4ABF-ACF8-C3B1D9B36CA7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75E28DEB-6A85-45AB-9509-3D4862842CEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75E28DEB-6A85-45AB-9509-3D4862842CEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75E28DEB-6A85-45AB-9509-3D4862842CEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75E28DEB-6A85-45AB-9509-3D4862842CEB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CDF9196-232D-4ABF-ACF8-C3B1D9B36CA7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{75E28DEB-6A85-45AB-9509-3D4862842CEB} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FBEF886C-DD15-4CF6-9B35-33ED5D12879D}
