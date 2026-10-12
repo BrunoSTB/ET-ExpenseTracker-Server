@@ -25,7 +25,7 @@ EF Core migrations live in Infrastructure but need the API as startup project:
 dotnet ef migrations add <Name> --project ExpenseTracker.Infrastructure --startup-project ExpenseTracker.API
 ```
 
-Migrations are applied automatically on startup (`db.Database.Migrate()` in `Program.cs`), so there is no manual `database update` step.
+Migrations are applied automatically on startup (`db.Database.Migrate()` in `Program.cs`, guarded by `Database:MigrateOnStartup`, default `true`), so there is no manual `database update` step.
 
 CI (`.github/workflows/ci.yml`) runs restore → build (Release) → test with coverage on every PR and push to `main`, and fails if line coverage of the `Domain` or `Application` assembly is below 60%. There is no lint step.
 
@@ -34,7 +34,8 @@ CI (`.github/workflows/ci.yml`) runs restore → build (Release) → test with c
 Configuration comes from **environment variables**, loaded into typed options classes in `API/Options` that are validated with `ValidateDataAnnotations` + `ValidateOnStart`. `Program.cs` runs `IStartupValidator.Validate()` right after `Build()`, so every missing/invalid setting is reported at once, before migrations touch the database:
 
 - `ConnectionStrings__DefaultConnection` — Npgsql connection string, read via `IConfiguration` into `API/Options/DatabaseOptions.cs`. Required, must parse and specify a `Host`; there is no default and no credentials in code.
-- `JWT_SECRET` (≥ 32 bytes), `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_EXPIRATION_MINUTES` — loaded into `API/Options/JwtOptions.cs` (validated with `ValidateDataAnnotations` + `ValidateOnStart`, so a missing/short secret fails at startup). `JwtOptions` is the single source for both token signing (`API/Services/TokenService.cs`, injected as `ITokenService`) and JWT bearer validation in `Program.cs`. Only the secret is required; it is intentionally blank in `launchSettings.json` and must be set locally.
+- `Database__MigrateOnStartup` — optional, default `true`; the integration tests set it to `false` so the host starts without Postgres.
+- `JWT_SECRET` (≥ 32 bytes), `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_EXPIRATION_MINUTES` — read via `IConfiguration` into `API/Options/JwtOptions.cs` (validated with `ValidateDataAnnotations` + `ValidateOnStart`, so a missing/short secret fails at startup). `JwtOptions` is the single source for both token signing (`API/Services/TokenService.cs`, injected as `ITokenService`) and JWT bearer validation in `Program.cs`. Only the secret is required; it is intentionally absent from `launchSettings.json` (launch-profile variables override the shell, so even an empty entry would hide an exported secret) and must be exported locally.
 - `CORSOrigins` — comma-separated, read via `IConfiguration` into `API/Options/CorsOptions.cs`. Required; each origin must be `http(s)://host[:port]` with no path or trailing slash.
 
 The default `dotnet run` profile is `http` (port 5149, no Swagger env); use `--launch-profile https` for local dev.
@@ -60,7 +61,8 @@ Details in `tests/README.md`. Key points:
 
 - xUnit v3 + NSubstitute + **AwesomeAssertions** (do not add FluentAssertions v8+, it is commercially licensed). Packages, target framework and global usings (`Xunit`, `AwesomeAssertions`) come from `tests/Directory.Build.props`; a new test `.csproj` only needs project references.
 - Tests run in VSTest mode (`IsTestingPlatformApplication=false`) for `coverlet.collector` compatibility. Migrations are excluded from coverage via `tests/coverage.runsettings`.
-- Unit tests go in `tests/ExpenseTracker.UnitTests`; anything needing a database, the HTTP pipeline or Docker belongs in a future `ExpenseTracker.IntegrationTests` project.
+- Unit tests go in `tests/ExpenseTracker.UnitTests`; anything needing a database, the HTTP pipeline or Docker goes in `tests/ExpenseTracker.IntegrationTests`.
+- API integration tests (`tests/ExpenseTracker.IntegrationTests/Api`) use `CustomWebApplicationFactory` (in-memory pipeline, migrations off, test settings via `UseSetting`, repositories replaced by NSubstitute substitutes exposed on the factory) and `TestTokens` (valid tokens from the API's `ITokenService`, plus wrong issuer/audience/expired/other-key tokens). Each test class owns and disposes its factory. New endpoints or changes to status codes, validation or auth get a test there.
 - Folders and namespaces mirror production code (e.g. `Application/Services/UserService.cs` → `tests/ExpenseTracker.UnitTests/Application/Services/UserServiceTests.cs`, namespace `ExpenseTracker.UnitTests.Application.Services`). One `<Class>Tests` per class; names follow `Method_Scenario_ExpectedResult`; Arrange/Act/Assert blocks are commented.
 - Mock only boundaries (repositories, I/O, clock); use real implementations for pure code like `PasswordHasher`. Add builders/factories only once a second test needs them.
 - Test files import the production namespace with `using` (e.g. `using ExpenseTracker.Application.Services;`) and reference the type under test by its simple name.

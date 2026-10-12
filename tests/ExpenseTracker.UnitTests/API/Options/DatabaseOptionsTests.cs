@@ -37,6 +37,36 @@ public class DatabaseOptionsTests
     }
 
     [Fact]
+    public void Load_WithMigrateOnStartupUnset_DefaultsToTrue()
+    {
+        // Arrange
+        var configuration = BuildConfiguration(new());
+        var options = new DatabaseOptions();
+
+        // Act
+        options.Load(configuration);
+
+        // Assert
+        options.MigrateOnStartup.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("false", false)]
+    [InlineData("true", true)]
+    public void Load_WithMigrateOnStartupConfigured_UsesIt(string value, bool expected)
+    {
+        // Arrange
+        var configuration = BuildConfiguration(new() { ["Database:MigrateOnStartup"] = value });
+        var options = new DatabaseOptions();
+
+        // Act
+        options.Load(configuration);
+
+        // Assert
+        options.MigrateOnStartup.Should().Be(expected);
+    }
+
+    [Fact]
     public void Validate_WithValidConnectionString_ReturnsNoErrors()
     {
         // Arrange

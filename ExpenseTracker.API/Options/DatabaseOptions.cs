@@ -6,13 +6,17 @@ namespace ExpenseTracker.API.Options
     public class DatabaseOptions : IValidatableObject
     {
         public const string ConnectionStringName = "DefaultConnection";
+        public const string MigrateOnStartupKey = "Database:MigrateOnStartup";
 
         [Required(ErrorMessage = "A database connection string is required. Set ConnectionStrings__DefaultConnection.")]
         public string ConnectionString { get; set; } = string.Empty;
 
+        public bool MigrateOnStartup { get; set; } = true;
+
         public void Load(IConfiguration configuration)
         {
             ConnectionString = configuration.GetConnectionString(ConnectionStringName) ?? string.Empty;
+            MigrateOnStartup = configuration.GetValue(MigrateOnStartupKey, MigrateOnStartup);
         }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
