@@ -50,5 +50,10 @@ namespace ExpenseTracker.Application.Services
 
             return expectedUser;
         }
+
+        public async Task<bool> UpdatePreferences(long id, string currency, string locale)
+        {
+            return await _userRepository.UpdatePreferences(id, currency, locale);
+        }
     }
 }

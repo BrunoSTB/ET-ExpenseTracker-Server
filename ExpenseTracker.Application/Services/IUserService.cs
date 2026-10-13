@@ -7,5 +7,6 @@ namespace ExpenseTracker.Application.Services
         Task<User?> GetUserById(long id);
         Task<User> CreateUser(User user);
         Task<User?> Login(User user);
+        Task<bool> UpdatePreferences(long id, string currency, string locale);
     }
 }
