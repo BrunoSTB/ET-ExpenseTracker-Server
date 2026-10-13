@@ -19,7 +19,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
         {
             var dataModel = await Context.Bills
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId && x.SkippedAt == null);
 
             return dataModel == null ? null : ToDomain(dataModel);
         }
@@ -31,7 +31,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
 
             var dataModels = await Context.Bills
                 .AsNoTracking()
-                .Where(x => x.UserId == userId && x.Period >= from && x.Period < to)
+                .Where(x => x.UserId == userId && x.Period >= from && x.Period < to && x.SkippedAt == null)
                 .OrderBy(x => x.DueDate)
                 .ThenBy(x => x.Id)
                 .ToListAsync();
@@ -50,7 +50,8 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 DueDate = bill.DueDate,
                 Period = PeriodOf(bill.DueDate),
                 Value = bill.Value,
-                PaidAt = bill.PaidAt
+                PaidAt = bill.PaidAt,
+                SkippedAt = bill.SkippedAt
             };
 
             await Context.Bills.AddAsync(dataModel);
@@ -79,7 +80,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
         public async Task<bool> Update(Bill bill)
         {
             var updated = await Context.Bills
-                .Where(x => x.Id == bill.Id && x.UserId == bill.UserId)
+                .Where(x => x.Id == bill.Id && x.UserId == bill.UserId && x.SkippedAt == null)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.Name, bill.Name)
                     .SetProperty(x => x.AmountType, bill.AmountType)
@@ -100,6 +101,15 @@ namespace ExpenseTracker.Infrastructure.Repositories
             return deleted > 0;
         }
 
+        public async Task<bool> Skip(long id, DateOnly skippedAt, long userId)
+        {
+            var skipped = await Context.Bills
+                .Where(x => x.Id == id && x.UserId == userId && x.SkippedAt == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.SkippedAt, skippedAt));
+
+            return skipped > 0;
+        }
+
         public async Task<Dictionary<long, List<decimal>>> GetLastPaidValues(IReadOnlyCollection<long> recurringBillIds, int count, long userId)
         {
             var paid = await Context.Bills
@@ -108,7 +118,8 @@ namespace ExpenseTracker.Infrastructure.Repositories
                             x.RecurringBillId != null &&
                             recurringBillIds.Contains(x.RecurringBillId.Value) &&
                             x.PaidAt != null &&
-                            x.Value != null)
+                            x.Value != null &&
+                            x.SkippedAt == null)
                 .OrderByDescending(x => x.Period)
                 .Select(x => new { RecurringBillId = x.RecurringBillId!.Value, Value = x.Value!.Value })
                 .ToListAsync();
@@ -131,6 +142,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 WHERE "RecurringBillId" = {recurringBill.Id}
                   AND "UserId" = {recurringBill.UserId}
                   AND "PaidAt" IS NULL
+                  AND "SkippedAt" IS NULL
                   AND "Period" >= {from}
                 """);
         }
@@ -142,7 +154,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
             return await Context.Bills
                 .Where(x => x.RecurringBillId == recurringBillId &&
                             x.UserId == userId &&
-                            x.PaidAt == null &&
+                            (x.PaidAt == null || x.SkippedAt != null) &&
                             x.Period >= from)
                 .ExecuteDeleteAsync();
         }
@@ -159,7 +171,8 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 Id = dataModel.Id,
                 RecurringBillId = dataModel.RecurringBillId,
                 Value = dataModel.Value,
-                PaidAt = dataModel.PaidAt
+                PaidAt = dataModel.PaidAt,
+                SkippedAt = dataModel.SkippedAt
             };
         }
     }

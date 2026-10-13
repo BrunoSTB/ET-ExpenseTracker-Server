@@ -19,5 +19,6 @@ namespace ExpenseTracker.Infrastructure.DbConfiguration.DataModels
         public DateOnly Period { get; set; }
         public decimal? Value { get; set; }
         public DateOnly? PaidAt { get; set; }
+        public DateOnly? SkippedAt { get; set; }
     }
 }

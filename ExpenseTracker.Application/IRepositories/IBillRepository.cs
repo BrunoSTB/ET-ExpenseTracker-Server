@@ -10,6 +10,7 @@ namespace ExpenseTracker.Application.IRepositories
         Task<int> CreateMissing(IEnumerable<Bill> bills);
         Task<bool> Update(Bill bill);
         Task<bool> Delete(long id, long userId);
+        Task<bool> Skip(long id, DateOnly skippedAt, long userId);
         Task<Dictionary<long, List<decimal>>> GetLastPaidValues(IReadOnlyCollection<long> recurringBillIds, int count, long userId);
         Task<int> UpdateUnpaidFrom(RecurringBill recurringBill, DateOnly fromMonth);
         Task<int> DeleteUnpaidFrom(long recurringBillId, DateOnly fromMonth, long userId);

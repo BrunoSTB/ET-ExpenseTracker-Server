@@ -54,16 +54,7 @@ namespace ExpenseTracker.API.Controllers
         [HttpDelete("{id:long}")]
         public async Task<IActionResult> Delete(long id)
         {
-            bool deleted;
-            try
-            {
-                deleted = await _billService.Delete(id, User.GetUserId());
-            }
-            catch (RecurringBillOwnedException)
-            {
-                return Problem(statusCode: StatusCodes.Status409Conflict, title: "Bills of a recurring bill are removed through the recurring bill.");
-            }
-
+            var deleted = await _billService.Delete(id, User.GetUserId());
             if (!deleted)
             {
                 return NotFound();
