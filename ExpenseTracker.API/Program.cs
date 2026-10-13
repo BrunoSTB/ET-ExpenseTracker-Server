@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using System.Text.Json.Serialization;
 using AspNetCorsOptions = Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +21,8 @@ builder.Services.AddOptions<DatabaseOptions>()
 builder.Services.AddDbContext<PostgresDbContext>((services, options) =>
     options.UseNpgsql(services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString));
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
@@ -87,8 +89,12 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+builder.Services.AddSingleton(TimeProvider.System);
+
 builder.Services.AddScoped<IRecurringBillRepository, RecurringBillRepository>();
+builder.Services.AddScoped<IRecurringBillService, RecurringBillService>();
 builder.Services.AddScoped<IBillRepository, BillRepository>();
+builder.Services.AddScoped<IBillService, BillService>();
 
 var app = builder.Build();
 

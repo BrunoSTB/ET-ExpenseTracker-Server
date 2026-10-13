@@ -100,6 +100,41 @@ namespace ExpenseTracker.Infrastructure.Repositories
             return deleted > 0;
         }
 
+        public async Task<Dictionary<long, List<decimal>>> GetLastPaidValues(IReadOnlyCollection<long> recurringBillIds, int count, long userId)
+        {
+            var paid = await Context.Bills
+                .AsNoTracking()
+                .Where(x => x.UserId == userId &&
+                            x.RecurringBillId != null &&
+                            recurringBillIds.Contains(x.RecurringBillId.Value) &&
+                            x.PaidAt != null &&
+                            x.Value != null)
+                .OrderByDescending(x => x.Period)
+                .Select(x => new { RecurringBillId = x.RecurringBillId!.Value, Value = x.Value!.Value })
+                .ToListAsync();
+
+            return paid
+                .GroupBy(x => x.RecurringBillId)
+                .ToDictionary(g => g.Key, g => g.Take(count).Select(x => x.Value).ToList());
+        }
+
+        public async Task<int> UpdateUnpaidFrom(RecurringBill recurringBill, DateOnly fromMonth)
+        {
+            var from = PeriodOf(fromMonth);
+
+            return await Context.Database.ExecuteSqlAsync($"""
+                UPDATE "Bills"
+                SET "Name" = {recurringBill.Name},
+                    "AmountType" = {recurringBill.AmountType.ToString()},
+                    "Value" = {recurringBill.BillValue},
+                    "DueDate" = LEAST("Period" + ({recurringBill.DueDay} - 1), ("Period" + INTERVAL '1 month' - INTERVAL '1 day')::date)
+                WHERE "RecurringBillId" = {recurringBill.Id}
+                  AND "UserId" = {recurringBill.UserId}
+                  AND "PaidAt" IS NULL
+                  AND "Period" >= {from}
+                """);
+        }
+
         public async Task<int> DeleteUnpaidFrom(long recurringBillId, DateOnly fromMonth, long userId)
         {
             var from = PeriodOf(fromMonth);

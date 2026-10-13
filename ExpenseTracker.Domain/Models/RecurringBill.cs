@@ -19,5 +19,38 @@ namespace ExpenseTracker.Domain.Models
             AmountType = amountType;
             StartMonth = startMonth;
         }
+
+        public decimal? BillValue => AmountType == AmountType.Fixed ? FixedValue : null;
+
+        public bool IsActiveIn(DateOnly month)
+        {
+            var period = MonthOf(month);
+            return period >= StartMonth && !IsEndedBy(period);
+        }
+
+        public bool IsEndedBy(DateOnly month)
+        {
+            return EndMonth != null && EndMonth <= MonthOf(month);
+        }
+
+        public DateOnly DueDateIn(DateOnly month)
+        {
+            var day = Math.Min(DueDay, DateTime.DaysInMonth(month.Year, month.Month));
+            return new DateOnly(month.Year, month.Month, day);
+        }
+
+        public Bill CreateBillFor(DateOnly month)
+        {
+            return new Bill(UserId, Name, AmountType, DueDateIn(month))
+            {
+                RecurringBillId = Id,
+                Value = BillValue
+            };
+        }
+
+        public static DateOnly MonthOf(DateOnly date)
+        {
+            return new DateOnly(date.Year, date.Month, 1);
+        }
     }
 }

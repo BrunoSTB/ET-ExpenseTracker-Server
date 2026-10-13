@@ -75,8 +75,8 @@ public class RecurringBillRepositoryTests
         var otherUserId = await _postgres.CreateUserAsync();
         var start = new DateOnly(2026, 1, 1);
         await CreateAsync(new RecurringBill(userId, "Open ended", 10, AmountType.Fixed, start));
-        await CreateAsync(new RecurringBill(userId, "Ends this month", 10, AmountType.Fixed, start) { EndMonth = new DateOnly(2026, 3, 1) });
-        await CreateAsync(new RecurringBill(userId, "Ended", 10, AmountType.Fixed, start) { EndMonth = new DateOnly(2026, 2, 1) });
+        await CreateAsync(new RecurringBill(userId, "Ends next month", 10, AmountType.Fixed, start) { EndMonth = new DateOnly(2026, 4, 1) });
+        await CreateAsync(new RecurringBill(userId, "Ended this month", 10, AmountType.Fixed, start) { EndMonth = new DateOnly(2026, 3, 1) });
         await CreateAsync(new RecurringBill(otherUserId, "Other user", 10, AmountType.Fixed, start));
 
         // Act
@@ -87,7 +87,7 @@ public class RecurringBillRepositoryTests
         }
 
         // Assert
-        result.Select(r => r.Name).Should().Equal("Open ended", "Ends this month");
+        result.Select(r => r.Name).Should().Equal("Open ended", "Ends next month");
     }
 
     [Fact]
