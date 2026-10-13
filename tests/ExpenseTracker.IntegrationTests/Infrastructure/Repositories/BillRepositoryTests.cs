@@ -285,6 +285,117 @@ public class BillRepositoryTests
         (await GetByYearAsync(2026, userId)).Should().ContainSingle();
     }
 
+    [Fact]
+    public async Task UpdateUnpaidFrom_WithMixedBills_UpdatesOnlyUnpaidBillsFromMonthOn()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var otherRecurringBillId = await CreateRecurringBillAsync(userId);
+        await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 1, 10)) { RecurringBillId = recurringBillId, Value = 1500m });
+        await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 2, 10)) { RecurringBillId = recurringBillId, Value = 1500m });
+        await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 3, 10))
+        {
+            RecurringBillId = recurringBillId,
+            Value = 1500m,
+            PaidAt = new DateOnly(2026, 1, 20)
+        });
+        await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 4, 10)) { RecurringBillId = recurringBillId, Value = 1500m });
+        await CreateAsync(new Bill(userId, "Other model", AmountType.Fixed, new DateOnly(2026, 2, 10)) { RecurringBillId = otherRecurringBillId, Value = 10m });
+        var edited = new RecurringBill(userId, "Power", 31, AmountType.VariableEstimated, new DateOnly(2026, 1, 1)) { Id = recurringBillId };
+
+        // Act
+        int updated;
+        await using (var context = _postgres.CreateContext())
+        {
+            updated = await new BillRepository(context).UpdateUnpaidFrom(edited, new DateOnly(2026, 2, 15));
+        }
+
+        // Assert
+        updated.Should().Be(2);
+        var result = await GetByYearAsync(2026, userId);
+        result.Select(b => (b.Name, b.AmountType, b.DueDate, b.Value)).Should().Equal(
+            ("Rent", AmountType.Fixed, new DateOnly(2026, 1, 10), 1500m),
+            ("Other model", AmountType.Fixed, new DateOnly(2026, 2, 10), 10m),
+            ("Power", AmountType.VariableEstimated, new DateOnly(2026, 2, 28), (decimal?)null),
+            ("Rent", AmountType.Fixed, new DateOnly(2026, 3, 10), 1500m),
+            ("Power", AmountType.VariableEstimated, new DateOnly(2026, 4, 30), (decimal?)null));
+    }
+
+    [Fact]
+    public async Task UpdateUnpaidFrom_WithFixedValue_SetsValueAndDueDay()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        await CreateAsync(new Bill(userId, "Rent", AmountType.VariableOnArrival, new DateOnly(2026, 5, 10)) { RecurringBillId = recurringBillId });
+        var edited = new RecurringBill(userId, "Rent", 5, AmountType.Fixed, new DateOnly(2026, 1, 1)) { Id = recurringBillId, FixedValue = 1800m };
+
+        // Act
+        await using (var context = _postgres.CreateContext())
+        {
+            await new BillRepository(context).UpdateUnpaidFrom(edited, new DateOnly(2026, 5, 1));
+        }
+
+        // Assert
+        var result = (await GetByYearAsync(2026, userId)).Single();
+        result.AmountType.Should().Be(AmountType.Fixed);
+        result.DueDate.Should().Be(new DateOnly(2026, 5, 5));
+        result.Value.Should().Be(1800m);
+    }
+
+    [Fact]
+    public async Task UpdateUnpaidFrom_WithOtherUser_UpdatesNothing()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var otherUserId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 3, 10)) { RecurringBillId = recurringBillId });
+        var tampered = new RecurringBill(otherUserId, "Tampered", 10, AmountType.Fixed, new DateOnly(2026, 1, 1)) { Id = recurringBillId };
+
+        // Act
+        int updated;
+        await using (var context = _postgres.CreateContext())
+        {
+            updated = await new BillRepository(context).UpdateUnpaidFrom(tampered, new DateOnly(2026, 1, 1));
+        }
+
+        // Assert
+        updated.Should().Be(0);
+        (await GetByYearAsync(2026, userId)).Single().Name.Should().Be("Rent");
+    }
+
+    [Fact]
+    public async Task GetLastPaidValues_WithPaidHistory_ReturnsMostRecentPaidValuesPerRecurringBill()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var otherUserId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var otherRecurringBillId = await CreateRecurringBillAsync(userId);
+        var otherUsersRecurringBillId = await CreateRecurringBillAsync(otherUserId);
+        var paidAt = new DateOnly(2026, 1, 1);
+        await CreateAsync(new Bill(userId, "Power", AmountType.VariableEstimated, new DateOnly(2025, 11, 10)) { RecurringBillId = recurringBillId, Value = 10m, PaidAt = paidAt });
+        await CreateAsync(new Bill(userId, "Power", AmountType.VariableEstimated, new DateOnly(2025, 12, 10)) { RecurringBillId = recurringBillId, Value = 20m, PaidAt = paidAt });
+        await CreateAsync(new Bill(userId, "Power", AmountType.VariableEstimated, new DateOnly(2026, 1, 10)) { RecurringBillId = recurringBillId, Value = 30m, PaidAt = paidAt });
+        await CreateAsync(new Bill(userId, "Power", AmountType.VariableEstimated, new DateOnly(2026, 2, 10)) { RecurringBillId = recurringBillId, Value = 40m, PaidAt = paidAt });
+        await CreateAsync(new Bill(userId, "Power", AmountType.VariableEstimated, new DateOnly(2026, 3, 10)) { RecurringBillId = recurringBillId, Value = 99m });
+        await CreateAsync(new Bill(userId, "Water", AmountType.VariableEstimated, new DateOnly(2026, 1, 10)) { RecurringBillId = otherRecurringBillId, Value = 5m, PaidAt = paidAt });
+        await CreateAsync(new Bill(otherUserId, "Power", AmountType.VariableEstimated, new DateOnly(2026, 1, 10)) { RecurringBillId = otherUsersRecurringBillId, Value = 7m, PaidAt = paidAt });
+
+        // Act
+        Dictionary<long, List<decimal>> result;
+        await using (var context = _postgres.CreateContext())
+        {
+            result = await new BillRepository(context).GetLastPaidValues([recurringBillId, otherUsersRecurringBillId], 3, userId);
+        }
+
+        // Assert
+        result.Keys.Should().Equal(recurringBillId);
+        result[recurringBillId].Should().Equal(40m, 30m, 20m);
+    }
+
     private async Task<long> CreateRecurringBillAsync(long userId)
     {
         await using var context = _postgres.CreateContext();

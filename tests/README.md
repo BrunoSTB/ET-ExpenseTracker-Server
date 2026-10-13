@@ -72,7 +72,7 @@ CI (`.github/workflows/ci.yml`) runs restore → build → test with coverage on
 
 ### API tests
 
-- `Infrastructure/CustomWebApplicationFactory.cs` starts the API in the `Testing` environment with test configuration (a dummy connection string, `Database:MigrateOnStartup=false`, `CORSOrigins` and `JWT_*`) supplied through `UseSetting`, so no process environment variables are read or written. It replaces `IUserRepository` with an NSubstitute substitute exposed as `UserRepository`; services, `PasswordHasher` and `TokenService` stay real.
+- `Infrastructure/CustomWebApplicationFactory.cs` starts the API in the `Testing` environment with test configuration (a dummy connection string, `Database:MigrateOnStartup=false`, `CORSOrigins` and `JWT_*`) supplied through `UseSetting`, so no process environment variables are read or written. It replaces `IUserRepository`, `IRecurringBillRepository` and `IBillRepository` with NSubstitute substitutes exposed as `UserRepository`, `RecurringBillRepository` and `BillRepository`, and `TimeProvider` with a substitute fixed at `CustomWebApplicationFactory.Now`; services, `PasswordHasher` and `TokenService` stay real.
 - `Infrastructure/TestTokens.cs` creates valid tokens with the API's own `ITokenService` and invalid ones (wrong issuer, wrong audience, expired, other signing key).
 - Each test class creates its own factory and disposes it (`IAsyncDisposable`), so substitutes never leak between tests.
 - Every new endpoint, or change to an endpoint's status codes, validation or authorization, gets a test in `Api/<Controller>EndpointsTests.cs` checking the HTTP contract.

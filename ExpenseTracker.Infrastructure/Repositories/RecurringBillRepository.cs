@@ -28,7 +28,7 @@ namespace ExpenseTracker.Infrastructure.Repositories
         {
             var dataModels = await Context.RecurringBills
                 .AsNoTracking()
-                .Where(x => x.UserId == userId && (x.EndMonth == null || x.EndMonth >= fromMonth))
+                .Where(x => x.UserId == userId && (x.EndMonth == null || x.EndMonth > fromMonth))
                 .OrderBy(x => x.Id)
                 .ToListAsync();
 

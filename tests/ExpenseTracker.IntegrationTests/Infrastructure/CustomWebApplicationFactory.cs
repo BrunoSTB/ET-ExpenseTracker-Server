@@ -13,7 +13,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public const string JwtIssuer = "ExpenseTracker.IntegrationTests.Issuer";
     public const string JwtAudience = "ExpenseTracker.IntegrationTests.Audience";
 
+    public static readonly DateTimeOffset Now = new(2026, 10, 13, 12, 0, 0, TimeSpan.Zero);
+
     public IUserRepository UserRepository { get; } = Substitute.For<IUserRepository>();
+    public IRecurringBillRepository RecurringBillRepository { get; } = Substitute.For<IRecurringBillRepository>();
+    public IBillRepository BillRepository { get; } = Substitute.For<IBillRepository>();
+    public TimeProvider TimeProvider { get; } = Substitute.For<TimeProvider>();
+
+    public CustomWebApplicationFactory()
+    {
+        TimeProvider.GetUtcNow().Returns(Now);
+    }
 
     public HttpClient CreateApiClient()
     {
@@ -38,6 +48,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.AddScoped(_ => UserRepository);
+            services.AddScoped(_ => RecurringBillRepository);
+            services.AddScoped(_ => BillRepository);
+            services.AddSingleton(TimeProvider);
         });
     }
 }
