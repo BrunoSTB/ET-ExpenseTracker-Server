@@ -211,18 +211,31 @@ public class BillEndpointsTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Delete_WithRecurringBillBill_ReturnsConflictProblem()
+    public async Task Delete_WithRecurringBillBill_SkipsItAndReturnsNoContent()
     {
         // Arrange
         _factory.BillRepository.GetById(20, UserId).Returns(Stored(AmountType.Fixed, value: 50m));
+        _factory.BillRepository.Skip(20, new DateOnly(2026, 10, 13), UserId).Returns(true);
 
         // Act
         var response = await SendAsync(HttpMethod.Delete, "/Bill/20");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await _factory.BillRepository.Received(1).Skip(20, new DateOnly(2026, 10, 13), UserId);
         await _factory.BillRepository.DidNotReceive().Delete(Arg.Any<long>(), Arg.Any<long>());
+    }
+
+    [Fact]
+    public async Task Delete_WithAlreadySkippedBill_ReturnsNotFoundProblem()
+    {
+        // Act
+        var response = await SendAsync(HttpMethod.Delete, "/Bill/20");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
+        await _factory.BillRepository.DidNotReceive().Skip(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<long>());
     }
 
     [Fact]

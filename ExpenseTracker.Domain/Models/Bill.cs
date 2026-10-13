@@ -10,6 +10,7 @@ namespace ExpenseTracker.Domain.Models
         public DateOnly DueDate { get; set; }
         public decimal? Value { get; set; }
         public DateOnly? PaidAt { get; set; }
+        public DateOnly? SkippedAt { get; set; }
 
         public Bill(long userId, string name, AmountType amountType, DateOnly dueDate)
         {

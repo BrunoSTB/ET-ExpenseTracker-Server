@@ -51,6 +51,9 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.Property<long?>("RecurringBillId")
                         .HasColumnType("bigint");
 
+                    b.Property<DateOnly?>("SkippedAt")
+                        .HasColumnType("date");
+
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 

@@ -1,4 +1,5 @@
 using ExpenseTracker.Domain.Models;
+using ExpenseTracker.Infrastructure.DbConfiguration.DataModels;
 using ExpenseTracker.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -396,6 +397,189 @@ public class BillRepositoryTests
         result[recurringBillId].Should().Equal(40m, 30m, 20m);
     }
 
+    [Fact]
+    public async Task Skip_WithRecurringBillBill_HidesItAndKeepsItsMonthFromBeingRecreated()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var bills = Enumerable.Range(1, 3)
+            .Select(month => new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, month, 10)) { RecurringBillId = recurringBillId })
+            .ToList();
+        await CreateMissingAsync(bills);
+        var march = (await GetByYearAsync(2026, userId)).Single(b => b.DueDate.Month == 3);
+
+        // Act
+        bool skipped;
+        await using (var context = _postgres.CreateContext())
+        {
+            skipped = await new BillRepository(context).Skip(march.Id, new DateOnly(2026, 10, 13), userId);
+        }
+
+        // Assert
+        skipped.Should().BeTrue();
+        (await CreateMissingAsync(bills)).Should().Be(0);
+        (await GetByYearAsync(2026, userId)).Select(b => b.DueDate.Month).Should().Equal(1, 2);
+        (await GetByIdAsync(march.Id, userId)).Should().BeNull();
+        (await GetStoredAsync(march.Id)).SkippedAt.Should().Be(new DateOnly(2026, 10, 13));
+    }
+
+    [Fact]
+    public async Task Skip_WithAlreadySkippedBill_ReturnsFalseAndKeepsSkippedAt()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var bill = await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 3, 10))
+        {
+            RecurringBillId = await CreateRecurringBillAsync(userId),
+            SkippedAt = new DateOnly(2026, 3, 1)
+        });
+
+        // Act
+        bool skipped;
+        await using (var context = _postgres.CreateContext())
+        {
+            skipped = await new BillRepository(context).Skip(bill.Id, new DateOnly(2026, 10, 13), userId);
+        }
+
+        // Assert
+        skipped.Should().BeFalse();
+        (await GetStoredAsync(bill.Id)).SkippedAt.Should().Be(new DateOnly(2026, 3, 1));
+    }
+
+    [Fact]
+    public async Task Skip_WithBillOfOtherUser_ReturnsFalseAndKeepsBill()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var otherUserId = await _postgres.CreateUserAsync();
+        var bill = await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 3, 10)) { RecurringBillId = await CreateRecurringBillAsync(userId) });
+
+        // Act
+        bool skipped;
+        await using (var context = _postgres.CreateContext())
+        {
+            skipped = await new BillRepository(context).Skip(bill.Id, new DateOnly(2026, 10, 13), otherUserId);
+        }
+
+        // Assert
+        skipped.Should().BeFalse();
+        (await GetByIdAsync(bill.Id, userId)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Update_WithSkippedBill_ReturnsFalseAndKeepsBill()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var bill = await CreateAsync(new Bill(userId, "Water", AmountType.VariableOnArrival, new DateOnly(2026, 3, 5))
+        {
+            RecurringBillId = await CreateRecurringBillAsync(userId),
+            SkippedAt = new DateOnly(2026, 3, 1)
+        });
+        bill.Value = 80m;
+        bill.PaidAt = new DateOnly(2026, 3, 4);
+
+        // Act
+        bool updated;
+        await using (var context = _postgres.CreateContext())
+        {
+            updated = await new BillRepository(context).Update(bill);
+        }
+
+        // Assert
+        updated.Should().BeFalse();
+        var result = await GetStoredAsync(bill.Id);
+        result.Value.Should().BeNull();
+        result.PaidAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteUnpaidFrom_WithSkippedBills_DeletesSkippedBillsFromMonthOn()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var skippedAt = new DateOnly(2026, 3, 1);
+        var pastSkipped = await CreateAsync(new Bill(userId, "Past", AmountType.Fixed, new DateOnly(2026, 2, 10)) { RecurringBillId = recurringBillId, SkippedAt = skippedAt });
+        await CreateAsync(new Bill(userId, "Paid", AmountType.Fixed, new DateOnly(2026, 3, 10))
+        {
+            RecurringBillId = recurringBillId,
+            PaidAt = new DateOnly(2026, 2, 20),
+            SkippedAt = skippedAt
+        });
+        await CreateAsync(new Bill(userId, "Future", AmountType.Fixed, new DateOnly(2026, 4, 10)) { RecurringBillId = recurringBillId, SkippedAt = skippedAt });
+
+        // Act
+        int deleted;
+        await using (var context = _postgres.CreateContext())
+        {
+            deleted = await new BillRepository(context).DeleteUnpaidFrom(recurringBillId, new DateOnly(2026, 3, 1), userId);
+        }
+
+        // Assert
+        deleted.Should().Be(2);
+        await using var assertContext = _postgres.CreateContext();
+        (await assertContext.Bills.Where(b => b.UserId == userId).Select(b => b.Id).ToListAsync(TestContext.Current.CancellationToken))
+            .Should().Equal(pastSkipped.Id);
+    }
+
+    [Fact]
+    public async Task UpdateUnpaidFrom_WithSkippedBill_KeepsIt()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var bill = await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 5, 10))
+        {
+            RecurringBillId = recurringBillId,
+            Value = 1500m,
+            SkippedAt = new DateOnly(2026, 4, 1)
+        });
+        var edited = new RecurringBill(userId, "Power", 20, AmountType.VariableEstimated, new DateOnly(2026, 1, 1)) { Id = recurringBillId };
+
+        // Act
+        int updated;
+        await using (var context = _postgres.CreateContext())
+        {
+            updated = await new BillRepository(context).UpdateUnpaidFrom(edited, new DateOnly(2026, 1, 1));
+        }
+
+        // Assert
+        updated.Should().Be(0);
+        var result = await GetStoredAsync(bill.Id);
+        result.Name.Should().Be("Rent");
+        result.Value.Should().Be(1500m);
+        result.SkippedAt.Should().Be(new DateOnly(2026, 4, 1));
+    }
+
+    [Fact]
+    public async Task GetLastPaidValues_WithSkippedPaidBill_IgnoresIt()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var paidAt = new DateOnly(2026, 1, 1);
+        await CreateAsync(new Bill(userId, "Power", AmountType.VariableEstimated, new DateOnly(2026, 1, 10)) { RecurringBillId = recurringBillId, Value = 30m, PaidAt = paidAt });
+        await CreateAsync(new Bill(userId, "Power", AmountType.VariableEstimated, new DateOnly(2026, 2, 10))
+        {
+            RecurringBillId = recurringBillId,
+            Value = 999m,
+            PaidAt = paidAt,
+            SkippedAt = paidAt
+        });
+
+        // Act
+        Dictionary<long, List<decimal>> result;
+        await using (var context = _postgres.CreateContext())
+        {
+            result = await new BillRepository(context).GetLastPaidValues([recurringBillId], 3, userId);
+        }
+
+        // Assert
+        result[recurringBillId].Should().Equal(30m);
+    }
+
     private async Task<long> CreateRecurringBillAsync(long userId)
     {
         await using var context = _postgres.CreateContext();
@@ -407,6 +591,18 @@ public class BillRepositoryTests
     {
         await using var context = _postgres.CreateContext();
         return await new BillRepository(context).Create(bill);
+    }
+
+    private async Task<int> CreateMissingAsync(IEnumerable<Bill> bills)
+    {
+        await using var context = _postgres.CreateContext();
+        return await new BillRepository(context).CreateMissing(bills);
+    }
+
+    private async Task<BillDataModel> GetStoredAsync(long id)
+    {
+        await using var context = _postgres.CreateContext();
+        return await context.Bills.AsNoTracking().SingleAsync(b => b.Id == id);
     }
 
     private async Task<Bill?> GetByIdAsync(long id, long userId)

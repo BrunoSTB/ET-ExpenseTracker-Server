@@ -62,7 +62,7 @@ namespace ExpenseTracker.Application.Services
 
             if (bill.RecurringBillId != null)
             {
-                throw new RecurringBillOwnedException(id);
+                return await _billRepository.Skip(id, Today(), userId);
             }
 
             return await _billRepository.Delete(id, userId);
@@ -81,7 +81,7 @@ namespace ExpenseTracker.Application.Services
                 throw new BillValueRequiredException(id);
             }
 
-            bill.PaidAt = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+            bill.PaidAt = Today();
             bill.Value = value ?? bill.Value;
 
             return await Save(bill);
@@ -102,6 +102,11 @@ namespace ExpenseTracker.Application.Services
             }
 
             return await Save(bill);
+        }
+
+        private DateOnly Today()
+        {
+            return DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
         }
 
         private async Task<BillOverview?> Save(Bill bill)

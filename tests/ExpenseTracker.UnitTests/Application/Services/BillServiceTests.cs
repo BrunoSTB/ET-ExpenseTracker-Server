@@ -181,17 +181,47 @@ public class BillServiceTests
     }
 
     [Fact]
-    public async Task Delete_WithRecurringBillBill_ThrowsRecurringBillOwnedException()
+    public async Task Delete_WithRecurringBillBill_SkipsItToday()
     {
         // Arrange
         _billRepository.GetById(1, UserId).Returns(Stored(AmountType.Fixed, recurringBillId: 4));
+        _billRepository.Skip(1, Today, UserId).Returns(true);
 
         // Act
-        var act = () => _service.Delete(1, UserId);
+        var result = await _service.Delete(1, UserId);
 
         // Assert
-        await act.Should().ThrowAsync<RecurringBillOwnedException>();
+        result.Should().BeTrue();
+        await _billRepository.Received(1).Skip(1, Today, UserId);
         await _billRepository.DidNotReceive().Delete(Arg.Any<long>(), Arg.Any<long>());
+    }
+
+    [Fact]
+    public async Task Delete_WhenRecurringBillBillVanishesBeforeSkip_ReturnsFalse()
+    {
+        // Arrange
+        _billRepository.GetById(1, UserId).Returns(Stored(AmountType.Fixed, recurringBillId: 4));
+        _billRepository.Skip(1, Today, UserId).Returns(false);
+
+        // Act
+        var result = await _service.Delete(1, UserId);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_WithStandaloneBill_DoesNotSkipIt()
+    {
+        // Arrange
+        _billRepository.GetById(1, UserId).Returns(Stored(AmountType.Fixed, recurringBillId: null));
+        _billRepository.Delete(1, UserId).Returns(true);
+
+        // Act
+        await _service.Delete(1, UserId);
+
+        // Assert
+        await _billRepository.DidNotReceive().Skip(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<long>());
     }
 
     [Fact]
@@ -203,6 +233,7 @@ public class BillServiceTests
         // Assert
         result.Should().BeFalse();
         await _billRepository.DidNotReceive().Delete(Arg.Any<long>(), Arg.Any<long>());
+        await _billRepository.DidNotReceive().Skip(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<long>());
     }
 
     [Fact]
