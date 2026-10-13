@@ -22,7 +22,7 @@ namespace ExpenseTracker.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.ExpenseDataModel", b =>
+            modelBuilder.Entity("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.BillDataModel", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -30,25 +30,85 @@ namespace ExpenseTracker.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<DateTime>("ExpenseDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("AmountType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateOnly?>("PaidAt")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("Period")
+                        .HasColumnType("date");
+
+                    b.Property<long?>("RecurringBillId")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal>("Value")
+                    b.Property<decimal?>("Value")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RecurringBillId", "Period")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Period");
+
+                    b.ToTable("Bills");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.RecurringBillDataModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AmountType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("DueDay")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("EndMonth")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("FixedValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("StartMonth")
+                        .HasColumnType("date");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
                     b.HasIndex("UserId");
 
-                    b.ToTable("Expenses");
+                    b.ToTable("RecurringBills", t =>
+                        {
+                            t.HasCheckConstraint("CK_RecurringBills_DueDay", "\"DueDay\" BETWEEN 1 AND 31");
+                        });
                 });
 
             modelBuilder.Entity("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.UserDataModel", b =>
@@ -59,8 +119,22 @@ namespace ExpenseTracker.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("BRL");
+
                     b.Property<string>("Email")
                         .HasColumnType("text");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(35)
+                        .HasColumnType("character varying(35)")
+                        .HasDefaultValue("pt-BR");
 
                     b.Property<string>("Password")
                         .IsRequired()
@@ -78,7 +152,25 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.ExpenseDataModel", b =>
+            modelBuilder.Entity("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.BillDataModel", b =>
+                {
+                    b.HasOne("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.RecurringBillDataModel", "RecurringBill")
+                        .WithMany()
+                        .HasForeignKey("RecurringBillId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.UserDataModel", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RecurringBill");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.RecurringBillDataModel", b =>
                 {
                     b.HasOne("ExpenseTracker.Infrastructure.DbConfiguration.DataModels.UserDataModel", "User")
                         .WithMany()

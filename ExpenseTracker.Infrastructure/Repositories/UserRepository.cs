@@ -28,7 +28,9 @@ namespace ExpenseTracker.Infrastructure.Repositories
             return new User(userDataModel.Username, userDataModel.Password)
             {
                 Id = userDataModel.Id,
-                Email = userDataModel.Email
+                Email = userDataModel.Email,
+                Currency = userDataModel.Currency,
+                Locale = userDataModel.Locale
             };
         }
 
@@ -36,7 +38,12 @@ namespace ExpenseTracker.Infrastructure.Repositories
         {
             try
             {
-                var userDataModel = new UserDataModel(user.Username, user.Password!) { Email = user.Email };
+                var userDataModel = new UserDataModel(user.Username, user.Password!)
+                {
+                    Email = user.Email,
+                    Currency = user.Currency,
+                    Locale = user.Locale
+                };
 
                 var result = await Context.Users.AddAsync(userDataModel);
                 await Context.SaveChangesAsync();
@@ -44,7 +51,9 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 return new User(result.Entity.Username, result.Entity.Password)
                 {
                     Id = result.Entity.Id,
-                    Email = result.Entity.Email
+                    Email = result.Entity.Email,
+                    Currency = result.Entity.Currency,
+                    Locale = result.Entity.Locale
                 };
             }
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
@@ -65,7 +74,9 @@ namespace ExpenseTracker.Infrastructure.Repositories
             return new User(userDataModel.Username, userDataModel.Password)
             {
                 Id = userDataModel.Id,
-                Email = userDataModel.Email
+                Email = userDataModel.Email,
+                Currency = userDataModel.Currency,
+                Locale = userDataModel.Locale
             };
         }
     }

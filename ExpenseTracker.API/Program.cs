@@ -87,8 +87,8 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
-builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<IRecurringBillRepository, RecurringBillRepository>();
+builder.Services.AddScoped<IBillRepository, BillRepository>();
 
 var app = builder.Build();
 

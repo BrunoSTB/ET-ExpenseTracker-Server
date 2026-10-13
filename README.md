@@ -1,6 +1,6 @@
 # ExpenseTracker Server
 
-A RESTful API backend for managing personal expenses, built with ASP.NET Core 10 and Clean Architecture.
+A RESTful API backend for tracking bills to pay, built with ASP.NET Core 10 and Clean Architecture.
 
 ## Tech Stack
 
@@ -35,13 +35,9 @@ ExpenseTracker.Infrastructure — EF Core DbContext, repositories, migrations
 |--------|----------|-------------|
 | `GET` | `/user/me` | Get the authenticated user |
 
-### Expenses (JWT required)
+### Bills (JWT required)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/expense?year={year}` | Get expenses by year, grouped by month |
-| `POST` | `/expense` | Create a new expense |
-| `DELETE` | `/expense/DeleteByIds?ids={ids}` | Delete expenses by comma-separated IDs |
+The bill and recurring-bill endpoints are being built (see issue #29). The old `/expense` endpoints were removed.
 
 ## Prerequisites
 
