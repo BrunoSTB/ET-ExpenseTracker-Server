@@ -13,5 +13,6 @@ namespace ExpenseTracker.Application.IRepositories
         Task<Dictionary<long, List<decimal>>> GetLastPaidValues(IReadOnlyCollection<long> recurringBillIds, int count, long userId);
         Task<int> UpdateUnpaidFrom(RecurringBill recurringBill, DateOnly fromMonth);
         Task<int> DeleteUnpaidFrom(long recurringBillId, DateOnly fromMonth, long userId);
+        Task<int> DetachFrom(long recurringBillId, DateOnly fromMonth, long userId);
     }
 }

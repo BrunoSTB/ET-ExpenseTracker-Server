@@ -147,6 +147,18 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 .ExecuteDeleteAsync();
         }
 
+        public async Task<int> DetachFrom(long recurringBillId, DateOnly fromMonth, long userId)
+        {
+            var from = PeriodOf(fromMonth);
+
+            return await Context.Bills
+                .Where(x => x.RecurringBillId == recurringBillId &&
+                            x.UserId == userId &&
+                            x.Period >= from)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.RecurringBillId, (long?)null));
+        }
+
         private static DateOnly PeriodOf(DateOnly date)
         {
             return new DateOnly(date.Year, date.Month, 1);

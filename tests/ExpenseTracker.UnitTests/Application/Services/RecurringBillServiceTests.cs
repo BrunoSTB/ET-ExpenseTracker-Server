@@ -119,7 +119,7 @@ public class RecurringBillServiceTests
     }
 
     [Fact]
-    public async Task Delete_WithActiveRecurringBill_EndsInCurrentMonthAndDeletesUnpaidBills()
+    public async Task Delete_WithActiveRecurringBill_EndsInCurrentMonthDeletesUnpaidBillsAndDetachesTheRest()
     {
         // Arrange
         var stored = Stored();
@@ -131,7 +131,11 @@ public class RecurringBillServiceTests
         // Assert
         result.Should().BeTrue();
         await _recurringBillRepository.Received(1).Update(Arg.Is<RecurringBill>(r => r.Id == stored.Id && r.EndMonth == CurrentMonth));
-        await _billRepository.Received(1).DeleteUnpaidFrom(stored.Id, CurrentMonth, UserId);
+        Received.InOrder(() =>
+        {
+            _billRepository.DeleteUnpaidFrom(stored.Id, CurrentMonth, UserId);
+            _billRepository.DetachFrom(stored.Id, CurrentMonth, UserId);
+        });
     }
 
     [Fact]
@@ -147,6 +151,7 @@ public class RecurringBillServiceTests
         result.Should().BeFalse();
         await _recurringBillRepository.DidNotReceive().Update(Arg.Any<RecurringBill>());
         await _billRepository.DidNotReceive().DeleteUnpaidFrom(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<long>());
+        await _billRepository.DidNotReceive().DetachFrom(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<long>());
     }
 
     [Fact]
@@ -163,6 +168,7 @@ public class RecurringBillServiceTests
         // Assert
         result.Should().BeFalse();
         await _billRepository.DidNotReceive().DeleteUnpaidFrom(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<long>());
+        await _billRepository.DidNotReceive().DetachFrom(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<long>());
     }
 
     private static RecurringBill Stored()

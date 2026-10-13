@@ -286,6 +286,55 @@ public class BillRepositoryTests
     }
 
     [Fact]
+    public async Task DetachFrom_WithMixedBills_DetachesOnlyBillsFromMonthOn()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var otherRecurringBillId = await CreateRecurringBillAsync(userId);
+        var paidAt = new DateOnly(2026, 3, 1);
+        var past = await CreateAsync(new Bill(userId, "Past", AmountType.Fixed, new DateOnly(2026, 2, 10)) { RecurringBillId = recurringBillId, PaidAt = paidAt });
+        var current = await CreateAsync(new Bill(userId, "Current", AmountType.Fixed, new DateOnly(2026, 3, 10)) { RecurringBillId = recurringBillId, PaidAt = paidAt });
+        var paidAhead = await CreateAsync(new Bill(userId, "Paid ahead", AmountType.Fixed, new DateOnly(2026, 4, 10)) { RecurringBillId = recurringBillId, PaidAt = paidAt });
+        var otherModel = await CreateAsync(new Bill(userId, "Other model", AmountType.Fixed, new DateOnly(2026, 4, 10)) { RecurringBillId = otherRecurringBillId });
+
+        // Act
+        int detached;
+        await using (var context = _postgres.CreateContext())
+        {
+            detached = await new BillRepository(context).DetachFrom(recurringBillId, new DateOnly(2026, 3, 25), userId);
+        }
+
+        // Assert
+        detached.Should().Be(2);
+        (await GetByIdAsync(past.Id, userId))!.RecurringBillId.Should().Be(recurringBillId);
+        (await GetByIdAsync(current.Id, userId))!.RecurringBillId.Should().BeNull();
+        (await GetByIdAsync(paidAhead.Id, userId))!.RecurringBillId.Should().BeNull();
+        (await GetByIdAsync(otherModel.Id, userId))!.RecurringBillId.Should().Be(otherRecurringBillId);
+    }
+
+    [Fact]
+    public async Task DetachFrom_WithOtherUser_DetachesNothing()
+    {
+        // Arrange
+        var userId = await _postgres.CreateUserAsync();
+        var otherUserId = await _postgres.CreateUserAsync();
+        var recurringBillId = await CreateRecurringBillAsync(userId);
+        var bill = await CreateAsync(new Bill(userId, "Rent", AmountType.Fixed, new DateOnly(2026, 3, 10)) { RecurringBillId = recurringBillId });
+
+        // Act
+        int detached;
+        await using (var context = _postgres.CreateContext())
+        {
+            detached = await new BillRepository(context).DetachFrom(recurringBillId, new DateOnly(2026, 1, 1), otherUserId);
+        }
+
+        // Assert
+        detached.Should().Be(0);
+        (await GetByIdAsync(bill.Id, userId))!.RecurringBillId.Should().Be(recurringBillId);
+    }
+
+    [Fact]
     public async Task UpdateUnpaidFrom_WithMixedBills_UpdatesOnlyUnpaidBillsFromMonthOn()
     {
         // Arrange

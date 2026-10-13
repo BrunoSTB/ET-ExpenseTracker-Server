@@ -65,6 +65,7 @@ namespace ExpenseTracker.Application.Services
 
             await _recurringBillRepository.Update(existing);
             await _billRepository.DeleteUnpaidFrom(id, currentMonth, userId);
+            await _billRepository.DetachFrom(id, currentMonth, userId);
             return true;
         }
 
