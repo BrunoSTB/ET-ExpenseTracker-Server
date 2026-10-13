@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Exceptions;
 using ExpenseTracker.Application.IRepositories;
 using ExpenseTracker.Application.Models;
 using ExpenseTracker.Domain.Models;
@@ -10,11 +11,15 @@ namespace ExpenseTracker.Application.Services
 
         private readonly IBillRepository _billRepository;
         private readonly IRecurringBillRepository _recurringBillRepository;
+        private readonly TimeProvider _timeProvider;
 
-        public BillService(IBillRepository billRepository, IRecurringBillRepository recurringBillRepository)
+        public BillService(IBillRepository billRepository,
+                           IRecurringBillRepository recurringBillRepository,
+                           TimeProvider timeProvider)
         {
             _billRepository = billRepository;
             _recurringBillRepository = recurringBillRepository;
+            _timeProvider = timeProvider;
         }
 
         public async Task<List<BillOverview>> GetYear(int year, long userId)
@@ -35,7 +40,83 @@ namespace ExpenseTracker.Application.Services
             }
 
             var bills = await _billRepository.GetByYear(year, userId);
+            return await WithEstimates(bills, userId);
+        }
 
+        public async Task<BillOverview> Create(Bill bill)
+        {
+            bill.RecurringBillId = null;
+            bill.PaidAt = null;
+
+            var created = await _billRepository.Create(bill);
+            return new BillOverview(created, null);
+        }
+
+        public async Task<bool> Delete(long id, long userId)
+        {
+            var bill = await _billRepository.GetById(id, userId);
+            if (bill == null)
+            {
+                return false;
+            }
+
+            if (bill.RecurringBillId != null)
+            {
+                throw new RecurringBillOwnedException(id);
+            }
+
+            return await _billRepository.Delete(id, userId);
+        }
+
+        public async Task<BillOverview?> Pay(long id, long userId, decimal? value)
+        {
+            var bill = await _billRepository.GetById(id, userId);
+            if (bill == null)
+            {
+                return null;
+            }
+
+            if (value == null && bill.AmountType != AmountType.Fixed)
+            {
+                throw new BillValueRequiredException(id);
+            }
+
+            bill.PaidAt = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+            bill.Value = value ?? bill.Value;
+
+            return await Save(bill);
+        }
+
+        public async Task<BillOverview?> Unpay(long id, long userId)
+        {
+            var bill = await _billRepository.GetById(id, userId);
+            if (bill == null)
+            {
+                return null;
+            }
+
+            bill.PaidAt = null;
+            if (bill.AmountType != AmountType.Fixed)
+            {
+                bill.Value = null;
+            }
+
+            return await Save(bill);
+        }
+
+        private async Task<BillOverview?> Save(Bill bill)
+        {
+            if (!await _billRepository.Update(bill))
+            {
+                return null;
+            }
+
+            var overviews = await WithEstimates([bill], bill.UserId);
+            return overviews[0];
+        }
+
+        private async Task<List<BillOverview>> WithEstimates(List<Bill> bills, long userId)
+        {
             var estimatedIds = bills
                 .Where(b => b.AmountType == AmountType.VariableEstimated && b.RecurringBillId != null)
                 .Select(b => b.RecurringBillId!.Value)

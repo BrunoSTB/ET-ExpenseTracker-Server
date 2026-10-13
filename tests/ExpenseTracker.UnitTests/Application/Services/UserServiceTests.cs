@@ -94,6 +94,21 @@ public class UserServiceTests
         result.Should().BeSameAs(stored);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UpdatePreferences_WithUser_ReturnsWhetherRepositoryUpdated(bool updated)
+    {
+        // Arrange
+        _repository.UpdatePreferences(1, "USD", "en-US").Returns(updated);
+
+        // Act
+        var result = await _service.UpdatePreferences(1, "USD", "en-US");
+
+        // Assert
+        result.Should().Be(updated);
+    }
+
     private static User CreateStoredUser()
     {
         var stored = new User(Username) { Id = 1 };

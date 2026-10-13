@@ -79,5 +79,16 @@ namespace ExpenseTracker.Infrastructure.Repositories
                 Locale = userDataModel.Locale
             };
         }
+
+        public async Task<bool> UpdatePreferences(long id, string currency, string locale)
+        {
+            var updated = await Context.Users
+                .Where(x => x.Id == id)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Currency, currency)
+                    .SetProperty(x => x.Locale, locale));
+
+            return updated > 0;
+        }
     }
 }

@@ -14,6 +14,7 @@ namespace ExpenseTracker.IntegrationTests.Api;
 public class UserEndpointsTests : IAsyncDisposable
 {
     private const long UserId = 7;
+    private const long OtherUserId = 8;
     private const string Username = "bruno";
     private const string Password = "correct-password";
     private const string ProblemJson = "application/problem+json";
@@ -156,6 +157,122 @@ public class UserEndpointsTests : IAsyncDisposable
         response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
         var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         json.Should().NotContain("database is down");
+    }
+
+    [Fact]
+    public async Task GetPreferences_WithToken_ReturnsCurrentUsersCurrencyAndLocale()
+    {
+        // Arrange
+        var storedUser = StoredUser();
+        storedUser.Currency = "USD";
+        storedUser.Locale = "en-US";
+        _factory.UserRepository.GetById(UserId).Returns(storedUser);
+        var request = Authorized(HttpMethod.Get, "/User/Preferences", TestTokens.For(_factory, storedUser));
+
+        // Act
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preferences = await response.Content.ReadFromJsonAsync<PreferencesDto>(TestContext.Current.CancellationToken);
+        preferences!.Currency.Should().Be("USD");
+        preferences.Locale.Should().Be("en-US");
+        await _factory.UserRepository.DidNotReceive().GetById(OtherUserId);
+    }
+
+    [Fact]
+    public async Task GetPreferences_WithMissingUser_ReturnsNotFoundProblem()
+    {
+        // Arrange
+        var request = Authorized(HttpMethod.Get, "/User/Preferences", TestTokens.For(_factory, new User(Username) { Id = UserId }));
+
+        // Act
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
+    }
+
+    [Fact]
+    public async Task GetPreferences_WithoutToken_ReturnsUnauthorizedProblem()
+    {
+        // Act
+        var response = await _client.GetAsync("/User/Preferences", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
+    }
+
+    [Fact]
+    public async Task UpdatePreferences_WithValidBody_UpdatesCurrentUserAndReturnsCanonicalLocale()
+    {
+        // Arrange
+        _factory.UserRepository.UpdatePreferences(UserId, "USD", "en-US").Returns(true);
+        var request = Authorized(HttpMethod.Put, "/User/Preferences", TestTokens.For(_factory, new User(Username) { Id = UserId }));
+        request.Content = JsonContent.Create(new { currency = "USD", locale = "en-us", userId = OtherUserId });
+
+        // Act
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preferences = await response.Content.ReadFromJsonAsync<PreferencesDto>(TestContext.Current.CancellationToken);
+        preferences!.Currency.Should().Be("USD");
+        preferences.Locale.Should().Be("en-US");
+        await _factory.UserRepository.Received(1).UpdatePreferences(UserId, "USD", "en-US");
+        await _factory.UserRepository.DidNotReceive().UpdatePreferences(OtherUserId, Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [InlineData("XYZ", "pt-BR")]
+    [InlineData("brl", "pt-BR")]
+    [InlineData("", "pt-BR")]
+    [InlineData(null, "pt-BR")]
+    [InlineData("BRL", "xx-INVALID")]
+    [InlineData("BRL", "")]
+    [InlineData("BRL", null)]
+    public async Task UpdatePreferences_WithInvalidBody_ReturnsValidationProblem(string? currency, string? locale)
+    {
+        // Arrange
+        var request = Authorized(HttpMethod.Put, "/User/Preferences", TestTokens.For(_factory, new User(Username) { Id = UserId }));
+        request.Content = JsonContent.Create(new { currency, locale });
+
+        // Act
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
+        await _factory.UserRepository.DidNotReceive().UpdatePreferences(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task UpdatePreferences_WithMissingUser_ReturnsNotFoundProblem()
+    {
+        // Arrange
+        _factory.UserRepository.UpdatePreferences(UserId, "BRL", "pt-BR").Returns(false);
+        var request = Authorized(HttpMethod.Put, "/User/Preferences", TestTokens.For(_factory, new User(Username) { Id = UserId }));
+        request.Content = JsonContent.Create(new { currency = "BRL", locale = "pt-BR" });
+
+        // Act
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
+    }
+
+    [Fact]
+    public async Task UpdatePreferences_WithoutToken_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.PutAsJsonAsync("/User/Preferences", new { currency = "BRL", locale = "pt-BR" },
+                                                    TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     private static User StoredUser()

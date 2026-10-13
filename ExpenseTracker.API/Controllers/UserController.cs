@@ -44,6 +44,34 @@ namespace ExpenseTracker.API.Controllers
             return Ok(ToDto(result));
         }
 
+        [Authorize]
+        [HttpGet("Preferences")]
+        public async Task<ActionResult<PreferencesDto>> GetPreferences()
+        {
+            var result = await _userService.GetUserById(User.GetUserId());
+            if (result == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new PreferencesDto(result.Currency, result.Locale));
+        }
+
+        [Authorize]
+        [HttpPut("Preferences")]
+        public async Task<ActionResult<PreferencesDto>> UpdatePreferences([FromBody] PreferencesRequestModel requestBody)
+        {
+            var preferences = new PreferencesDto(requestBody.Currency, PreferencesRequestModel.FindCulture(requestBody.Locale)!.Name);
+
+            var updated = await _userService.UpdatePreferences(User.GetUserId(), preferences.Currency, preferences.Locale);
+            if (!updated)
+            {
+                return NotFound();
+            }
+
+            return Ok(preferences);
+        }
+
         [HttpPost]
         [Route("Register")]
         public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserRequestModel requestBody)
