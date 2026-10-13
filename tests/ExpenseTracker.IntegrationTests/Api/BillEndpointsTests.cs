@@ -104,6 +104,11 @@ public class BillEndpointsTests : IAsyncDisposable
         ]);
         _factory.BillRepository.GetLastPaidValues(Arg.Any<IReadOnlyCollection<long>>(), 3, UserId)
             .Returns(new Dictionary<long, List<decimal>> { [4] = [100m, 200m] });
+        // Power's template is still active; Rent's ended before the year.
+        _factory.RecurringBillRepository.GetActive(UserId, new DateOnly(2026, 1, 1)).Returns(
+        [
+            new RecurringBill(UserId, "Power", 10, AmountType.VariableEstimated, new DateOnly(2026, 1, 1)) { Id = 4 }
+        ]);
 
         // Act
         var response = await SendAsync(HttpMethod.Get, "/Bill?year=2026");
@@ -123,13 +128,16 @@ public class BillEndpointsTests : IAsyncDisposable
         power.GetProperty("value").ValueKind.Should().Be(JsonValueKind.Null);
         power.GetProperty("estimate").GetDecimal().Should().Be(150m);
         power.GetProperty("paidAt").ValueKind.Should().Be(JsonValueKind.Null);
+        power.GetProperty("canDelete").GetBoolean().Should().BeFalse();
 
         var rent = json[1].GetProperty("bills")[1];
         rent.GetProperty("value").GetDecimal().Should().Be(1500m);
         rent.GetProperty("estimate").ValueKind.Should().Be(JsonValueKind.Null);
         rent.GetProperty("paidAt").GetString().Should().Be("2026-02-20");
+        rent.GetProperty("canDelete").GetBoolean().Should().BeTrue();
 
         json[11].GetProperty("bills")[0].GetProperty("recurringBillId").ValueKind.Should().Be(JsonValueKind.Null);
+        json[11].GetProperty("bills")[0].GetProperty("canDelete").GetBoolean().Should().BeTrue();
     }
 
     [Fact]
@@ -211,10 +219,11 @@ public class BillEndpointsTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Delete_WithRecurringBillBill_ReturnsConflictProblem()
+    public async Task Delete_WithBillOfActiveRecurringBill_ReturnsConflictProblem()
     {
         // Arrange
         _factory.BillRepository.GetById(20, UserId).Returns(Stored(AmountType.Fixed, value: 50m));
+        _factory.RecurringBillRepository.GetById(3, UserId).Returns(Template(endMonth: null));
 
         // Act
         var response = await SendAsync(HttpMethod.Delete, "/Bill/20");
@@ -223,6 +232,22 @@ public class BillEndpointsTests : IAsyncDisposable
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         response.Content.Headers.ContentType!.MediaType.Should().Be(ProblemJson);
         await _factory.BillRepository.DidNotReceive().Delete(Arg.Any<long>(), Arg.Any<long>());
+    }
+
+    [Fact]
+    public async Task Delete_WithBillOfRecurringBillEndedByItsMonth_ReturnsNoContent()
+    {
+        // Arrange
+        _factory.BillRepository.GetById(20, UserId).Returns(Stored(AmountType.Fixed, value: 50m));
+        _factory.RecurringBillRepository.GetById(3, UserId).Returns(Template(endMonth: new DateOnly(2026, 10, 1)));
+        _factory.BillRepository.Delete(20, UserId).Returns(true);
+
+        // Act
+        var response = await SendAsync(HttpMethod.Delete, "/Bill/20");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await _factory.BillRepository.Received(1).Delete(20, UserId);
     }
 
     [Fact]
@@ -433,6 +458,16 @@ public class BillEndpointsTests : IAsyncDisposable
     private static async Task<JsonElement> ReadJsonAsync(HttpResponseMessage response)
     {
         return await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+    }
+
+    private static RecurringBill Template(DateOnly? endMonth)
+    {
+        return new RecurringBill(UserId, "Bill", 10, AmountType.Fixed, new DateOnly(2026, 1, 1))
+        {
+            Id = 3,
+            FixedValue = 50m,
+            EndMonth = endMonth
+        };
     }
 
     private static Bill Stored(AmountType amountType, decimal? value = null, DateOnly? paidAt = null, long? recurringBillId = 3, long userId = UserId)

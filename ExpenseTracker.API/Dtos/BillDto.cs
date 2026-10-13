@@ -13,6 +13,7 @@ namespace ExpenseTracker.API.Dtos
         public decimal? Value { get; set; }
         public decimal? Estimate { get; set; }
         public DateOnly? PaidAt { get; set; }
+        public bool CanDelete { get; set; }
 
         public BillDto(BillOverview overview)
         {
@@ -24,6 +25,7 @@ namespace ExpenseTracker.API.Dtos
             Value = overview.Bill.Value;
             Estimate = overview.Estimate;
             PaidAt = overview.Bill.PaidAt;
+            CanDelete = overview.CanDelete;
         }
     }
 }

@@ -84,6 +84,27 @@ public class BillServiceTests
     }
 
     [Fact]
+    public async Task GetYear_SetsCanDeleteOnlyForBillsNoTemplateOwns()
+    {
+        // Arrange
+        ActiveRecurringBills(
+            new RecurringBill(UserId, "Rent", 10, AmountType.Fixed, new DateOnly(2026, 1, 1)) { Id = 3, FixedValue = 1500m },
+            new RecurringBill(UserId, "Gym", 10, AmountType.Fixed, new DateOnly(2026, 1, 1)) { Id = 4, FixedValue = 90m, EndMonth = new DateOnly(2026, 10, 1) });
+        var rent = new Bill(UserId, "Rent", AmountType.Fixed, new DateOnly(2026, 10, 10)) { Id = 1, RecurringBillId = 3 };
+        var gymBefore = new Bill(UserId, "Gym", AmountType.Fixed, new DateOnly(2026, 9, 10)) { Id = 2, RecurringBillId = 4 };
+        var gymAfter = new Bill(UserId, "Gym", AmountType.Fixed, new DateOnly(2026, 10, 10)) { Id = 3, RecurringBillId = 4 };
+        var endedBeforeYear = new Bill(UserId, "Old", AmountType.Fixed, new DateOnly(2026, 2, 10)) { Id = 4, RecurringBillId = 9 };
+        var standalone = new Bill(UserId, "Gift", AmountType.Fixed, new DateOnly(2026, 10, 20)) { Id = 5 };
+        _billRepository.GetByYear(Year, UserId).Returns([rent, gymBefore, gymAfter, endedBeforeYear, standalone]);
+
+        // Act
+        var result = await _service.GetYear(Year, UserId);
+
+        // Assert
+        result.Select(o => (o.Bill.Id, o.CanDelete)).Should().Equal((1, false), (2, false), (3, true), (4, true), (5, true));
+    }
+
+    [Fact]
     public async Task GetYear_WithVariableEstimatedBills_ReturnsAverageOfLastPaidValues()
     {
         // Arrange
@@ -96,7 +117,7 @@ public class BillServiceTests
         var result = await _service.GetYear(Year, UserId);
 
         // Assert
-        result.Should().ContainSingle().Which.Should().Be(new BillOverview(bill, 111.67m));
+        result.Should().ContainSingle().Which.Should().Be(new BillOverview(bill, 111.67m, CanDelete: true));
     }
 
     [Fact]
@@ -180,8 +201,43 @@ public class BillServiceTests
         await _billRepository.Received(1).Delete(1, UserId);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("2026-11-01")]
+    public async Task Delete_WithBillOfTemplateActiveInItsMonth_ThrowsRecurringBillOwnedException(string? endMonth)
+    {
+        // Arrange
+        _billRepository.GetById(1, UserId).Returns(Stored(AmountType.Fixed, recurringBillId: 4));
+        _recurringBillRepository.GetById(4, UserId).Returns(Template(endMonth == null ? null : DateOnly.Parse(endMonth)));
+
+        // Act
+        var act = () => _service.Delete(1, UserId);
+
+        // Assert
+        await act.Should().ThrowAsync<RecurringBillOwnedException>();
+        await _billRepository.DidNotReceive().Delete(Arg.Any<long>(), Arg.Any<long>());
+    }
+
+    [Theory]
+    [InlineData("2026-10-01")]
+    [InlineData("2026-09-01")]
+    public async Task Delete_WithBillOfTemplateEndedByItsMonth_DeletesIt(string endMonth)
+    {
+        // Arrange
+        _billRepository.GetById(1, UserId).Returns(Stored(AmountType.Fixed, recurringBillId: 4));
+        _recurringBillRepository.GetById(4, UserId).Returns(Template(DateOnly.Parse(endMonth)));
+        _billRepository.Delete(1, UserId).Returns(true);
+
+        // Act
+        var result = await _service.Delete(1, UserId);
+
+        // Assert
+        result.Should().BeTrue();
+        await _billRepository.Received(1).Delete(1, UserId);
+    }
+
     [Fact]
-    public async Task Delete_WithRecurringBillBill_ThrowsRecurringBillOwnedException()
+    public async Task Delete_WithBillOfMissingTemplate_ThrowsRecurringBillOwnedException()
     {
         // Arrange
         _billRepository.GetById(1, UserId).Returns(Stored(AmountType.Fixed, recurringBillId: 4));
@@ -203,6 +259,22 @@ public class BillServiceTests
         // Assert
         result.Should().BeFalse();
         await _billRepository.DidNotReceive().Delete(Arg.Any<long>(), Arg.Any<long>());
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("2026-10-01", true)]
+    public async Task Unpay_WithBillOfTemplate_SetsCanDeleteFromTemplateEnd(string? endMonth, bool canDelete)
+    {
+        // Arrange
+        _billRepository.GetById(1, UserId).Returns(Stored(AmountType.Fixed, value: 50m, paidAt: Today, recurringBillId: 4));
+        _recurringBillRepository.GetById(4, UserId).Returns(Template(endMonth == null ? null : DateOnly.Parse(endMonth)));
+
+        // Act
+        var result = await _service.Unpay(1, UserId);
+
+        // Assert
+        result!.CanDelete.Should().Be(canDelete);
     }
 
     [Fact]
@@ -371,6 +443,16 @@ public class BillServiceTests
             RecurringBillId = recurringBillId,
             Value = value,
             PaidAt = paidAt
+        };
+    }
+
+    private static RecurringBill Template(DateOnly? endMonth)
+    {
+        return new RecurringBill(UserId, "Bill", 10, AmountType.Fixed, new DateOnly(2026, 1, 1))
+        {
+            Id = 4,
+            FixedValue = 50m,
+            EndMonth = endMonth
         };
     }
 

@@ -39,8 +39,14 @@ namespace ExpenseTracker.Application.Services
                 await _billRepository.CreateMissing(missing);
             }
 
+            // A template missing from the active list ended before the year, so
+            // it no longer owns any of the year's bills.
+            var templates = recurringBills.ToDictionary(r => r.Id);
             var bills = await _billRepository.GetByYear(year, userId);
-            return await WithEstimates(bills, userId);
+            return await WithEstimates(bills, userId, bill =>
+                bill.RecurringBillId == null ||
+                !templates.TryGetValue(bill.RecurringBillId.Value, out var template) ||
+                template.IsEndedBy(bill.DueDate));
         }
 
         public async Task<BillOverview> Create(Bill bill)
@@ -49,7 +55,7 @@ namespace ExpenseTracker.Application.Services
             bill.PaidAt = null;
 
             var created = await _billRepository.Create(bill);
-            return new BillOverview(created, null);
+            return new BillOverview(created, null, CanDelete: true);
         }
 
         public async Task<bool> Delete(long id, long userId)
@@ -60,7 +66,7 @@ namespace ExpenseTracker.Application.Services
                 return false;
             }
 
-            if (bill.RecurringBillId != null)
+            if (!await CanDelete(bill))
             {
                 throw new RecurringBillOwnedException(id);
             }
@@ -111,11 +117,26 @@ namespace ExpenseTracker.Application.Services
                 return null;
             }
 
-            var overviews = await WithEstimates([bill], bill.UserId);
+            var canDelete = await CanDelete(bill);
+            var overviews = await WithEstimates([bill], bill.UserId, _ => canDelete);
             return overviews[0];
         }
 
-        private async Task<List<BillOverview>> WithEstimates(List<Bill> bills, long userId)
+        // While its template is active in the bill's month, the template owns the
+        // bill (and would generate it again), so it is removed through the
+        // template. Once the template ended by that month, the bill stands alone.
+        private async Task<bool> CanDelete(Bill bill)
+        {
+            if (bill.RecurringBillId == null)
+            {
+                return true;
+            }
+
+            var recurringBill = await _recurringBillRepository.GetById(bill.RecurringBillId.Value, bill.UserId);
+            return recurringBill != null && recurringBill.IsEndedBy(bill.DueDate);
+        }
+
+        private async Task<List<BillOverview>> WithEstimates(List<Bill> bills, long userId, Func<Bill, bool> canDelete)
         {
             var estimatedIds = bills
                 .Where(b => b.AmountType == AmountType.VariableEstimated && b.RecurringBillId != null)
@@ -128,7 +149,7 @@ namespace ExpenseTracker.Application.Services
                 : new Dictionary<long, List<decimal>>();
 
             return bills
-                .Select(bill => new BillOverview(bill, EstimateFor(bill, lastPaidValues)))
+                .Select(bill => new BillOverview(bill, EstimateFor(bill, lastPaidValues), canDelete(bill)))
                 .ToList();
         }
 
