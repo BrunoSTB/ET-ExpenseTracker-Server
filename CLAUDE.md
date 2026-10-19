@@ -29,6 +29,8 @@ Migrations are applied automatically on startup (`db.Database.Migrate()` in `Pro
 
 CI (`.github/workflows/ci.yml`) runs restore → build (Release) → test with coverage on every PR and push to `main`, and fails if line coverage of the `Domain` or `Application` assembly is below 60%. There is no lint step.
 
+`.github/workflows/docker.yml` builds the `Dockerfile` on every push to `main` and pushes it to GHCR (`ghcr.io/brunostb/et-expensetracker-server`, tagged with the commit SHA and `latest`). Deploying to Azure Container Apps is a manual `az containerapp update --image` with the SHA tag (see README).
+
 ## Runtime configuration
 
 Configuration comes from **environment variables**, loaded into typed options classes in `API/Options` that are validated with `ValidateDataAnnotations` + `ValidateOnStart`. `Program.cs` runs `IStartupValidator.Validate()` right after `Build()`, so every missing/invalid setting is reported at once, before migrations touch the database:
