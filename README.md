@@ -160,15 +160,29 @@ format (note to get the connection string from: Direct Connection String, Connec
 }
 ```
 
-### 2. Build and push the image, then deploy
+### 2. Publish the image to GitHub Container Registry
+
+`.github/workflows/docker.yml` builds the `Dockerfile` and pushes it to
+`ghcr.io/brunostb/et-expensetracker-server` on every push to `main` (it can
+also be started by hand from the Actions tab). Each build is tagged with the
+commit SHA and with `latest`; the job summary prints the exact deploy command.
+It authenticates with the workflow's `GITHUB_TOKEN`, so no secret is needed.
+
+After the first run the image shows up under **Packages** on the GitHub
+profile. Pick one:
+
+- **Public package** (Package settings → Change visibility → Public): Azure
+  pulls it without credentials. The image holds only the compiled app; secrets
+  stay in the Container App's environment variables.
+- **Private package**: create a classic personal access token with only the
+  `read:packages` scope and pass it as the registry password below.
+
+### 3. Deploy
 
 ```bash
 az login
 
 az group create --name expense-tracker-rg --location eastus
-
-az acr create --resource-group expense-tracker-rg --name <yourAcrName> --sku Basic
-az acr build --registry <yourAcrName> --image expense-tracker-api:latest .
 
 az containerapp env create --name expense-tracker-env --resource-group expense-tracker-rg --location eastus
 
@@ -176,8 +190,7 @@ az containerapp create \
   --name expense-tracker-api \
   --resource-group expense-tracker-rg \
   --environment expense-tracker-env \
-  --image <yourAcrName>.azurecr.io/expense-tracker-api:latest \
-  --registry-server <yourAcrName>.azurecr.io \
+  --image ghcr.io/brunostb/et-expensetracker-server:<commit-sha> \
   --target-port 8080 \
   --ingress external \
   --min-replicas 0 --max-replicas 1 \
@@ -189,6 +202,10 @@ az containerapp create \
     CORSOrigins="https://your-frontend-domain.com"
 ```
 
+For a private package, add
+`--registry-server ghcr.io --registry-username <github-user> --registry-password <PAT>`
+to `az containerapp create`.
+
 Azure Container Apps terminates HTTPS for you and issues a free
 `*.azurecontainerapps.io` subdomain automatically — no reverse proxy or
 certificate setup needed. `--min-replicas 0` scales the app to zero when
@@ -198,12 +215,37 @@ idling. Set `--min-replicas 1` only if you want an always-warm instance —
 that runs 24/7 and will likely exceed the free grant, incurring a small
 monthly cost.
 
-### 3. Redeploying after changes
+### 4. Redeploying after changes
+
+Push to `main`, wait for the **Docker** workflow, then point the app at the new
+commit:
 
 ```bash
-az acr build --registry <yourAcrName> --image expense-tracker-api:latest .
 az containerapp update --name expense-tracker-api --resource-group expense-tracker-rg \
-  --image <yourAcrName>.azurecr.io/expense-tracker-api:latest
+  --image ghcr.io/brunostb/et-expensetracker-server:<commit-sha>
+```
+
+Use the SHA tag rather than `latest`: Container Apps only creates a new
+revision when the image reference changes, and SHA tags make rollbacks a
+matter of deploying an older SHA.
+
+### Migrating an existing app from Azure Container Registry
+
+Once the Docker workflow has published an image, switch the app over and then
+delete the registry (the Basic SKU is billed even when unused):
+
+```bash
+# private package only
+az containerapp registry set --name expense-tracker-api --resource-group expense-tracker-rg \
+  --server ghcr.io --username <github-user> --password <PAT>
+
+az containerapp update --name expense-tracker-api --resource-group expense-tracker-rg \
+  --image ghcr.io/brunostb/et-expensetracker-server:<commit-sha>
+
+# after confirming the new revision is healthy
+az containerapp registry remove --name expense-tracker-api --resource-group expense-tracker-rg \
+  --server <yourAcrName>.azurecr.io
+az acr delete --name <yourAcrName> --resource-group expense-tracker-rg
 ```
 
 ## Authentication
